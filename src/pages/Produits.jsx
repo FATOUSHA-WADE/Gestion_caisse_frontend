@@ -160,13 +160,8 @@ export default function Produits() {
 
   // Capture photo - FIXED VERSION
   const capturePhoto = async () => {
-    console.log("=== CAPTURE CLICKED ===");
-    
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    
-    console.log("Video element:", video);
-    console.log("Canvas element:", canvas);
     
     if (!video) {
       console.error("No video element");
@@ -188,8 +183,6 @@ export default function Produits() {
     // Get actual dimensions
     const width = video.videoWidth || video.clientWidth || 640;
     const height = video.videoHeight || video.clientHeight || 480;
-    
-    console.log("Capture dimensions:", width, "x", height);
     
     if (width === 0 || height === 0) {
       console.error("Invalid dimensions");
@@ -213,7 +206,6 @@ export default function Produits() {
     
     // Get image data URL
     const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-    console.log("Data URL length:", dataUrl ? dataUrl.length : 0);
     
     if (!dataUrl) {
       setCameraError("Erreur lors de la capture");
@@ -229,8 +221,6 @@ export default function Produits() {
         lastModified: Date.now()
       });
       
-      console.log("File created:", file.name, file.size);
-      
       // Update form
       setFormData(prev => ({ ...prev, image: file }));
       setImagePreview(dataUrl);
@@ -243,7 +233,6 @@ export default function Produits() {
       }
       setShowCamera(false);
       
-      console.log("=== CAPTURE SUCCESS ===");
     } catch (err) {
       console.error("Capture error:", err);
       setCameraError("Erreur: " + err.message);
@@ -873,8 +862,6 @@ export default function Produits() {
                             playsInline 
                             muted
                             className="w-full h-64 object-cover pointer-events-none"
-                            onPlay={() => console.log("Video playing")}
-                            onLoadedMetadata={() => console.log("Video metadata loaded")}
                             onError={(e) => {
                               console.error("Video error:", e);
                               setCameraError("Erreur lors du chargement de la vidéo.");
@@ -898,12 +885,7 @@ export default function Produits() {
                           <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4 z-\[9999\] pointer-events-auto">
                             <button
                                 type="button"
-                                onClickCapture={(e) => {
-                                  console.log("Capture clicked!");
-                                }}
-                                onClick={(e) => {
-                                  console.log("=== CAPTURE CLICKED ===");
-                                  window.testCapture = capturePhoto;
+                                onClick={() => {
                                   capturePhoto();
                                 }}
                                 className="cursor-pointer select-none active:scale-95 transition-transform px-10 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full font-bold flex items-center gap-3 shadow-xl border-2 border-white"
@@ -913,8 +895,7 @@ export default function Produits() {
                             </button>
                               <button
                                 type="button"
-                                onClick={(e) => {
-                                  console.log("Close clicked!");
+                                onClick={() => {
                                   stopCamera();
                                 }}
                                 className="cursor-pointer px-6 py-4 bg-gray-700/80 text-white rounded-full font-medium hover:bg-gray-600"
