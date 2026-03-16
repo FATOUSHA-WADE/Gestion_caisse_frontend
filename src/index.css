@@ -1,0 +1,524 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Variables for theming */
+:root {
+  /* Light theme (default) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --border-color: #e5e7eb;
+  --border-light: #f3f4f6;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --sidebar-bg: #222222;
+  --sidebar-text: #ffffff;
+  --sidebar-hover: #333333;
+  --sidebar-active: #f97316;
+  --card-bg: #ffffff;
+  --hover-bg: #f9fafb;
+}
+
+.dark {
+  /* Dark theme - Amélioré pour une meilleure lisibilité */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  --border-light: #475569;
+  --shadow-color: rgba(0, 0, 0, 0.4);
+  --sidebar-bg: #0f172a;
+  --sidebar-text: #e2e8f0;
+  --sidebar-hover: #1e293b;
+  --sidebar-active: #f97316;
+  --card-bg: #1e293b;
+  --hover-bg: #334155;
+}
+
+/* Base styles using CSS variables */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Utility classes for theme colors */
+.bg-theme-primary {
+  background-color: var(--bg-primary);
+}
+
+.bg-theme-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.bg-theme-tertiary {
+  background-color: var(--bg-tertiary);
+}
+
+.text-theme-primary {
+  color: var(--text-primary);
+}
+
+.text-theme-secondary {
+  color: var(--text-secondary);
+}
+
+.text-theme-muted {
+  color: var(--text-muted);
+}
+
+.border-theme {
+  border-color: var(--border-color);
+}
+
+.border-theme-light {
+  border-color: var(--border-light);
+}
+
+.shadow-theme {
+  box-shadow: 0 1px 3px 0 var(--shadow-color);
+}
+
+.bg-theme-sidebar {
+  background-color: var(--sidebar-bg);
+}
+
+.text-theme-sidebar {
+  color: var(--sidebar-text);
+}
+
+.hover-theme-sidebar:hover {
+  background-color: var(--sidebar-hover);
+}
+
+.bg-theme-active {
+  background-color: var(--sidebar-active);
+}
+
+.bg-theme-card {
+  background-color: var(--card-bg);
+}
+
+.bg-theme-hover {
+  background-color: var(--hover-bg);
+}
+
+/* Dark mode headings and text visibility - Global overrides */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
+  color: #f8fafc;
+}
+
+.dark p {
+  color: var(--text-secondary);
+}
+
+.dark label {
+  color: var(--text-secondary);
+}
+
+.dark span {
+  color: inherit;
+}
+
+/* Dark mode text colors - Override all gray text colors */
+.dark .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-gray-800 {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-gray-700 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-gray-600 {
+  color: #94a3b8 !important;
+}
+
+.dark .text-gray-500 {
+  color: #64748b !important;
+}
+
+.dark .text-gray-400 {
+  color: #64748b !important;
+}
+
+.dark .text-gray-300 {
+  color: #475569 !important;
+}
+
+.dark .text-gray-200 {
+  color: #334155 !important;
+}
+
+.dark .text-gray-100 {
+  color: #1e293b !important;
+}
+
+/* Cards and containers in dark mode */
+.dark .bg-white {
+  background-color: var(--card-bg) !important;
+}
+
+.dark .bg-gray-50 {
+  background-color: var(--bg-tertiary) !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: var(--bg-secondary) !important;
+}
+
+.dark .bg-gray-200 {
+  background-color: var(--bg-tertiary) !important;
+}
+
+.dark .border-gray-200 {
+  border-color: #334155 !important;
+}
+
+.dark .border-gray-100 {
+  border-color: #334155 !important;
+}
+
+.dark .border-gray-300 {
+  border-color: #475569 !important;
+}
+
+/* Tables in dark mode */
+.dark table {
+  color: var(--text-secondary);
+}
+
+.dark th {
+  color: #e2e8f0 !important;
+}
+
+.dark td {
+  color: var(--text-secondary);
+}
+
+.dark thead {
+  background-color: var(--bg-secondary);
+}
+
+.dark tbody tr {
+  border-bottom-color: #334155;
+}
+
+.dark tbody tr:hover {
+  background-color: var(--hover-bg);
+}
+
+/* Inputs in dark mode */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+}
+
+/* Buttons in dark mode */
+.dark .btn-primary {
+  background-color: #f97316;
+  color: white;
+}
+
+/* Modal/Dialog in dark mode */
+.dark .fixed > .bg-white {
+  background-color: var(--card-bg) !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  /* Tablet and below */
+  .lg\:hidden {
+    display: block;
+  }
+  
+  .lg\:flex {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Mobile */
+  main {
+    padding: 1rem;
+  }
+  
+  h1 {
+    font-size: 1.5rem;
+  }
+  
+  h2 {
+    font-size: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Desktop and up */
+  .lg\:ml-64 {
+    margin-left: 16rem;
+  }
+  
+  .lg\:ml-20 {
+    margin-left: 5rem;
+  }
+}
+
+/* Responsive Tables - Enable horizontal scroll on all tables */
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Make all tables scrollable */
+.table-container table {
+  min-width: 600px;
+}
+
+/* Responsive grid adjustments for cards */
+@media (max-width: 640px) {
+  .grid-cols-1,
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4,
+  .grid-cols-5 {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Dashboard stats cards */
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  /* KPI Cards on mobile */
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile-friendly table cells */
+@media (max-width: 640px) {
+  table th,
+  table td {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  table th {
+    font-size: 0.65rem;
+  }
+  
+  /* Hide less important columns on very small screens */
+  .hide-xs {
+    display: none;
+  }
+}
+
+/* Dashboard specific responsive styles */
+@media (max-width: 768px) {
+  .dashboard-stats {
+    gap: 0.5rem;
+  }
+  
+  .dashboard-stats > div {
+    padding: 0.75rem;
+  }
+  
+  .dashboard-title {
+    font-size: 1.125rem;
+  }
+  
+  .dashboard-subtitle {
+    font-size: 0.875rem;
+  }
+}
+
+/* Cards container responsive */
+@media (max-width: 640px) {
+  .card-padding {
+    padding: 0.75rem;
+  }
+  
+  .card-title {
+    font-size: 1rem;
+  }
+}
+
+/* Status badges in dark mode - Plus lisibles */
+.dark .bg-green-100 {
+  background-color: #064e3b !important;
+}
+
+.dark .text-green-600,
+.dark .text-green-700,
+.dark .text-green-800 {
+  color: #4ade80 !important;
+}
+
+.dark .bg-red-100 {
+  background-color: #7f1d1d !important;
+}
+
+.dark .text-red-600,
+.dark .text-red-700,
+.dark .text-red-800 {
+  color: #f87171 !important;
+}
+
+.dark .bg-yellow-100 {
+  background-color: #78350f !important;
+}
+
+.dark .text-yellow-600,
+.dark .text-yellow-700,
+.dark .text-yellow-800 {
+  color: #fbbf24 !important;
+}
+
+.dark .bg-blue-100 {
+  background-color: #1e3a8a !important;
+}
+
+.dark .text-blue-600,
+.dark .text-blue-700,
+.dark .text-blue-800 {
+  color: #60a5fa !important;
+}
+
+.dark .bg-purple-100 {
+  background-color: #4c1d95 !important;
+}
+
+.dark .text-purple-600,
+.dark .text-purple-700,
+.dark .text-purple-800 {
+  color: #c084fc !important;
+}
+
+.dark .bg-orange-100 {
+  background-color: #7c2d12 !important;
+}
+
+.dark .text-orange-600,
+.dark .text-orange-700,
+.dark .text-orange-800 {
+  color: #fb923c !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: #374151 !important;
+}
+
+.dark .bg-gray-200 {
+  background-color: #4b5563 !important;
+}
+
+/* Role badges */
+.dark .bg-blue-50 {
+  background-color: #1e3a8a !important;
+}
+
+.dark .text-blue-500 {
+  color: #60a5fa !important;
+}
+
+.dark .bg-purple-50 {
+  background-color: #4c1d95 !important;
+}
+
+.dark .text-purple-500 {
+  color: #c084fc !important;
+}
+
+.dark .bg-green-50 {
+  background-color: #064e3b !important;
+}
+
+.dark .text-green-500 {
+  color: #4ade80 !important;
+}
+
+/* Boutons orange pour le paiement */
+.dark .bg-orange-500 {
+  background-color: #f97316 !important;
+}
+
+.dark .bg-orange-500:hover {
+  background-color: #ea580c !important;
+}
+
+.dark .bg-orange-500:text-white,
+.dark .bg-orange-500 .text-white {
+  color: #ffffff !important;
+}
+
+/* Disabled button in dark mode - keep it visible */
+.dark button:disabled {
+  background-color: #4b5563 !important;
+  color: #9ca3af !important;
+}
+
+/* Toast animations */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}

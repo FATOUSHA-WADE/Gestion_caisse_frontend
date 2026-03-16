@@ -1,0 +1,463 @@
+import { useEffect, useState, useContext } from "react";
+import { 
+  DollarSign, 
+  ShoppingCart, 
+  Package, 
+  TrendingUp,
+  AlertTriangle,
+  ArrowUp,
+  ArrowDown,
+  Eye
+} from "lucide-react";
+import Layout from "../components/Layout";
+import API from "../api/axios";
+import { AuthContext } from "../context/AuthContext";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line
+} from "recharts";
+
+export default function Dashboard() {
+  const { user } = useContext(AuthContext);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [weeklySales, setWeeklySales] = useState([]);
+  const [categorySales, setCategorySales] = useState([]);
+  const [recentProducts, setRecentProducts] = useState([]);
+  const [selectedSale, setSelectedSale] = useState(null);
+
+  // Get first name from user's full name
+  const getFirstName = (fullName) => {
+    if (!fullName) return "";
+    return fullName.split(" ")[0];
+  };
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await API.get("/dashboard/stats", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setStats(res.data.data);
+        setWeeklySales(res.data.data.ventesSemaine || []);
+        setCategorySales(res.data.data.ventesParCategorie || []);
+        setRecentProducts(res.data.data.produitsRecents || []);
+      } catch (error) {
+        console.error("Erreur:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat("fr-FR").format(value) + " FCFA";
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+        </div>
+      </Layout>
+    );
+  }
+
+  const statCards = [
+    {
+      title: "CA du Jour",
+      value: formatCurrency(stats?.caJour || 0),
+      icon: DollarSign,
+      color: "bg-green-500",
+      change: "+12%",
+      positive: true,
+    },
+    {
+      title: "CA du Mois",
+      value: formatCurrency(stats?.caMois || 0),
+      icon: TrendingUp,
+      color: "bg-blue-500",
+      change: "+8%",
+      positive: true,
+    },
+    {
+      title: "Nombre de Ventes",
+      value: stats?.nbVentes || 0,
+      icon: ShoppingCart,
+      color: "bg-purple-500",
+      change: "+5%",
+      positive: true,
+    },
+    {
+      title: "Produits en Alerte",
+      value: stats?.stockFaible?.length || 0,
+      icon: AlertTriangle,
+      color: "bg-red-500",
+      change: "-3%",
+      positive: false,
+    },
+  ];
+
+  // Couleurs pour les catégories
+  const categoryColors = ["#FFA726", "#42A5F5", "#66BB6A", "#FFD600", "#AB47BC", "#FF7043"];
+
+  // Préparer les données pour le graphique des ventes par jour
+  // Générer la semaine courante (lundi à dimanche)
+  const weekDays = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+  const today = new Date();
+  
+  // Trouver le lundi de la semaine courante
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+  monday.setHours(0, 0, 0, 0);
+
+  // Générer les dates de la semaine
+  const weekDates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+
+  // Associer les ventes à chaque jour
+  const salesByDay = weekDates.map((date, idx) => {
+    // Format date en YYYY-MM-DD en utilisant le fuseau horaire local
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    const vente = weeklySales.find(sale => {
+      // Différents formats possibles de date depuis la DB
+      let saleDateStr;
+      if (typeof sale.date === 'object' && sale.date !== null) {
+        const d = new Date(sale.date);
+        saleDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      } else if (typeof sale.date === 'string') {
+        saleDateStr = sale.date.slice(0, 10);
+      } else {
+        saleDateStr = '';
+      }
+      return saleDateStr === dateStr;
+    });
+    
+    return {
+      day: weekDays[idx],
+      fullDate: dateStr,
+      ventes: vente ? Number(vente.nbVentes) : 0,
+      montant: vente ? Number(vente.total) : 0
+    };
+  });
+
+  return (
+    <Layout>
+      <div className="space-y-4 sm:space-y-6">
+        {/* Page Header */}
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
+            Bonjour{user?.nom ? `, ${getFirstName(user.nom)}` : ""}
+          </h1>
+          <p className="text-gray-500 text-sm sm:text-base">Bienvenue à GestiCom</p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+          {statCards.map((stat, index) => (
+            <div
+              key={index}
+              className="bg-white rounded-xl shadow-sm border border-gray-100 p-5"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">{stat.title}</p>
+                  <p className="text-xl font-bold text-gray-800 mt-1">{stat.value}</p>
+                </div>
+                <div className={`${stat.color} p-3 rounded-lg`}>
+                  <stat.icon className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-1">
+                {stat.positive ? (
+                  <ArrowUp className="w-4 h-4 text-green-500" />
+                ) : (
+                  <ArrowDown className="w-4 h-4 text-red-500" />
+                )}
+                <span className={`text-sm ${stat.positive ? 'text-green-500' : 'text-red-500'}`}>
+                  {stat.change}
+                </span>
+                <span className="text-sm text-gray-400">vs semaine dernière</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          {/* Sales Chart */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-5">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Ventes de la semaine</h2>
+            <div className="h-48 sm:h-64 min-h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={salesByDay} barCategoryGap="20%">
+                  <XAxis dataKey="day" stroke="#6b7280" fontSize={12} />
+                  <YAxis stroke="#6b7280" fontSize={12} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                    formatter={(value) => [value, 'Ventes']}
+                  />
+                  <Bar 
+                    dataKey="ventes" 
+                    fill="#FFA726" 
+                    radius={[6, 6, 0, 0]} 
+                    name="Ventes"
+                    barSize={65}
+                    shadow={{ stroke: '#e65100', strokeWidth: 2, fill: '#FFA726' }}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Category Sales Chart */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Ventes par catégorie</h2>
+            <div className="h-64">
+              {categorySales.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categorySales}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="total"
+                      nameKey="categorie"
+                      label={({ categorie, percent }) => `${categorie} ${(percent * 100).toFixed(0)}%`}
+                      labelLine={false}
+                    >
+                      {categorySales.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={categoryColors[index % categoryColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => formatCurrency(value)} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400">
+                  Aucune donnée disponible
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Stock Alerts */}
+        {stats?.stockFaible && stats.stockFaible.length > 0 && (
+          <div className="rounded-xl shadow-sm border p-5 bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-4">
+              <AlertTriangle className="w-5 h-5 text-orange-500 dark:text-orange-400" />
+              <h2 className="text-lg font-semibold text-orange-600 dark:text-orange-200">
+                Alertes Stock
+              </h2>
+            </div>
+            <div className="space-y-2">
+              {stats.stockFaible.slice(0, 5).map((produit) => (
+                <div
+                  key={produit.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-orange-100 dark:bg-orange-900"
+                >
+                  <span className="font-medium text-orange-800 dark:text-orange-100">{produit.nom}</span>
+                  <span className="text-orange-600 dark:text-orange-300 font-semibold">
+                    Stock: {produit.stock}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recent Products - Derniers produits ajoutés */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Package className="w-5 h-5 text-orange-500" />
+            <h2 className="text-lg font-semibold text-gray-800">
+              Derniers Produits Ajoutés
+            </h2>
+          </div>
+          
+          {recentProducts.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Produit
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      SKU
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Catégorie
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Prix
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Stock
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date d'ajout
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {recentProducts.map((produit) => (
+                    <tr key={produit.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <span className="font-medium text-gray-800">{produit.nom}</span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {produit.sku}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {produit.categorie?.nom || "Sans catégorie"}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-gray-800">
+                        {formatCurrency(produit.prixVente)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          produit.stock <= 5 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
+                        }`}>
+                          {produit.stock}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {new Date(produit.createdAt).toLocaleString("fr-FR")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-400">
+              Aucun produit récent
+            </div>
+          )}
+        </div>
+
+        {/* Top Products */}
+        {stats?.topProduits && stats.topProduits.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Package className="w-5 h-5 text-orange-500" />
+              <h2 className="text-lg font-semibold text-gray-800">
+                Produits les Plus Vendus
+              </h2>
+            </div>
+
+            <div className="space-y-2">
+              {stats.topProduits.map((produit, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm">
+                      {index + 1}
+                    </span>
+
+                    <span className="font-medium text-gray-700">
+                      {produit.nom}
+                    </span>
+                  </div>
+
+                  <span className="text-gray-600">
+                    {produit.quantiteVendue} unités
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sale Detail Modal */}
+        {selectedSale && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-800">
+                    Détails de la vente
+                  </h2>
+                  <button
+                    onClick={() => setSelectedSale(null)}
+                    className="p-1 hover:bg-gray-100 rounded"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Référence:</span>
+                  <span className="font-semibold">{selectedSale.reference}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Date:</span>
+                  <span>{new Date(selectedSale.createdAt).toLocaleString("fr-FR")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Caissier:</span>
+                  <span>{selectedSale.user?.nom || "N/A"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Mode paiement:</span>
+                  <span>{selectedSale.modePaiement}</span>
+                </div>
+
+                <div className="border-t pt-4 mt-4">
+                  <h3 className="font-semibold text-gray-800 mb-3">Articles</h3>
+                  <div className="space-y-2">
+                    {selectedSale.lignes?.map((ligne, index) => (
+                      <div key={index} className="flex justify-between text-sm">
+                        <span className="text-gray-600">
+                          {ligne.quantite}x {ligne.produit?.nom || "Produit"}
+                        </span>
+                        <span className="font-medium">
+                          {formatCurrency(ligne.sousTotal)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 mt-4">
+                  <div className="flex justify-between text-xl font-bold">
+                    <span>Total</span>
+                    <span className="text-orange-600">
+                      {formatCurrency(selectedSale.total)}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedSale(null)}
+                  className="w-full mt-4 px-4 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </Layout>
+  );
+}

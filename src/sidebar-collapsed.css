@@ -1,0 +1,14 @@
+/* Sidebar collapsed state */
+.sidebar-collapsed .fixed.lg\:flex {
+  width: 5rem !important; /* w-20 */
+  min-width: 5rem !important;
+  max-width: 5rem !important;
+}
+.sidebar-collapsed .flex-1 > .lg\:ml-64 {
+  margin-left: 5rem !important;
+}
+
+/* Optionnel : masquer les labels de menu si collapsed */
+.sidebar-collapsed .sidebar-label {
+  display: none !important;
+}
