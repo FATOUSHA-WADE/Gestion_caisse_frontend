@@ -22,7 +22,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [weeklySales, setWeeklySales] = useState([]);
   const [categorySales, setCategorySales] = useState([]);
-  const [recentProducts, setRecentProducts] = useState([]);
   const [selectedSale, setSelectedSale] = useState(null);
 
   // Get first name from user's full name
@@ -41,7 +40,6 @@ export default function Dashboard() {
         setStats(res.data.data);
         setWeeklySales(res.data.data.ventesSemaine || []);
         setCategorySales(res.data.data.ventesParCategorie || []);
-        setRecentProducts(res.data.data.produitsRecents || []);
       } catch (error) {
         console.error("Erreur:", error);
       } finally {
@@ -279,77 +277,6 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-
-        {/* Recent Products - Derniers produits ajoutés */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Package className="w-5 h-5 text-orange-500" />
-            <h2 className="text-lg font-semibold text-gray-800">
-              Derniers Produits Ajoutés
-            </h2>
-          </div>
-          
-          {recentProducts.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Produit
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      SKU
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Catégorie
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Prix
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Stock
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date d'ajout
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {recentProducts.map((produit) => (
-                    <tr key={produit.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <span className="font-medium text-gray-800">{produit.nom}</span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {produit.sku}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {produit.categorie?.nom || "Sans catégorie"}
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-gray-800">
-                        {formatCurrency(produit.prixVente)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          produit.stock <= 5 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
-                        }`}>
-                          {produit.stock}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {new Date(produit.createdAt).toLocaleString("fr-FR")}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-400">
-              Aucun produit récent
-            </div>
-          )}
-        </div>
 
         {/* Top Products */}
         {stats?.topProduits && stats.topProduits.length > 0 && (
