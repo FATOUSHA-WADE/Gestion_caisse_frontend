@@ -1,26 +1,49 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useContext } from "react";
-import Login from "../pages/Login";
-import ForgotPassword from "../pages/ForgotPassword";
-import Dashboard from "../pages/Dashbord";
-import Produits from "../pages/Produits";
-import Categories from "../pages/Categories";
-import Ventes from "../pages/Ventes";
-import HistoriqueVentes from "../pages/HistoriqueVentes";
-import MouvementStock from "../pages/MouvementStock";
-import Rapports from "../pages/Rapports";
-import Utilisateurs from "../pages/Utilisateurs";
-import Profile from "../pages/Profile";
-import Settings from "../pages/Settings";
-import Recus from "../pages/Recus";
+import { useContext, lazy, Suspense } from "react";
 import PrivateRoute from "./PrivateRoute";
 import { AuthContext } from "../context/AuthContext";
+import { ParameterProvider } from "../context/ParameterContext";
+
+const Login = lazy(() => import("../pages/Login"));
+const ForgotPassword = lazy(() => import("../pages/ForgotPassword"));
+const Dashboard = lazy(() => import("../pages/Dashbord"));
+const Produits = lazy(() => import("../pages/Produits"));
+const Categories = lazy(() => import("../pages/Categories"));
+const Ventes = lazy(() => import("../pages/Ventes"));
+const HistoriqueVentes = lazy(() => import("../pages/HistoriqueVentes"));
+const MouvementStock = lazy(() => import("../pages/MouvementStock"));
+const Rapports = lazy(() => import("../pages/Rapports"));
+const Utilisateurs = lazy(() => import("../pages/Utilisateurs"));
+const Profile = lazy(() => import("../pages/Profile"));
+const Settings = lazy(() => import("../pages/Settings"));
+const Recus = lazy(() => import("../pages/Recus"));
+
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex flex-col items-center gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+        <p className="text-gray-500 text-sm">Chargement...</p>
+      </div>
+    </div>
+  );
+}
+
+function LoginPage() {
+  const { user, loading } = useContext(AuthContext);
+  
+  if (loading) return <LoadingFallback />;
+  
+  if (user) return <Navigate to="/ventes" replace />;
+  
+  return <Login />;
+}
 
 // Protected route component with role-based access
 function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading } = useContext(AuthContext);
   
-  if (loading) return <div>Chargement...</div>;
+  if (loading) return <LoadingFallback />;
   
   if (!user) return <Navigate to="/" />;
   
@@ -37,9 +60,11 @@ function ProtectedRoute({ children, allowedRoles }) {
 export default function AppRouter() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+      <ParameterProvider>
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
+          <Route path="/" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
         <Route
           path="/dashboard"
@@ -139,7 +164,11 @@ export default function AppRouter() {
             </PrivateRoute>
           }
         />
-      </Routes>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        </Suspense>
+      </ParameterProvider>
     </BrowserRouter>
   );
 }

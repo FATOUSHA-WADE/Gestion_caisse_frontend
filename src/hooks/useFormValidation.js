@@ -39,13 +39,26 @@ export function useFormValidation(initialValues = {}, validationRules = {}) {
       }
     }
 
-    // Phone validation
+    // Phone validation - Senegal format: 77XXXXXXX, 78XXXXXXX, +22177XXXXXXX, +22178XXXXXXX
     if (rules.phone && value) {
-      // Accepte les numeros de telephone avec ou sans espaces, tirets, parentheses
-      // Minimum 8 chiffres (compte uniquement les chiffres)
-      const digitsOnly = value.replace(/\D/g, '');
-      if (digitsOnly.length < 8) {
-        return rules.phoneMessage || 'Veuillez entrer un numero de telephone valide';
+      const cleaned = value.replace(/[\s\-\(\)\.]/g, '');
+      let phone = cleaned;
+      
+      if (phone.startsWith('+221')) {
+        phone = phone.substring(3);
+      } else if (phone.startsWith('221')) {
+        phone = phone.substring(2);
+      } else if (phone.startsWith('00221')) {
+        phone = phone.substring(4);
+      } else if (phone.startsWith('0')) {
+        phone = phone.substring(1);
+      }
+      
+      const digitsOnly = phone.replace(/\D/g, '');
+      const validPrefix = digitsOnly.startsWith('77') || digitsOnly.startsWith('78');
+      
+      if (digitsOnly.length !== 9 || !validPrefix) {
+        return rules.phoneMessage || 'Numéro invalide. Formats acceptés: 77XXXXXXX, 78XXXXXXX, +22177XXXXXXX, +22178XXXXXXX';
       }
     }
 

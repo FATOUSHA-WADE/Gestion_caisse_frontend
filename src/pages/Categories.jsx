@@ -42,7 +42,7 @@ export default function Categories() {
   
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 7,
     total: 0,
     totalPages: 0
   });
@@ -59,12 +59,18 @@ export default function Categories() {
   } = useFormValidation(formData, categoryValidationRules);
 
   const fetchCategories = useCallback(async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem("token");
       const params = new URLSearchParams({
         page: pagination.page,
         limit: pagination.limit,
       });
+      
+      // Server-side search
+      if (searchTerm) {
+        params.append("nom", searchTerm);
+      }
       
       if (statusFilter) {
         params.append("statut", statusFilter);
@@ -87,7 +93,7 @@ export default function Categories() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, statusFilter]);
+  }, [pagination.page, pagination.limit, statusFilter, searchTerm]);
 
   useEffect(() => {
     fetchCategories();
@@ -188,9 +194,9 @@ export default function Categories() {
     setErrors({});
   };
 
-  const filteredCategories = categories.filter((category) =>
-    category.nom.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Server-side filtering now - no client-side filter needed
+  // categories already come filtered from API with searchTerm parameter
+  const filteredCategories = categories;
 
   const getStatusBadge = (statut) => {
     const badges = {
@@ -239,7 +245,10 @@ export default function Categories() {
                 type="text"
                 placeholder="Rechercher une catégorie..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPagination(prev => ({ ...prev, page: 1 }));
+                }}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
@@ -350,25 +359,29 @@ export default function Categories() {
               </div>
 
               {/* Pagination */}
-              {pagination.totalPages > 1 && (
+              {pagination.total >= 7 && (
                 <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
                   <div className="text-sm text-gray-500">
                     Affichage de {(pagination.page - 1) * pagination.limit + 1} à {Math.min(pagination.page * pagination.limit, pagination.total)} sur {pagination.total}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                       disabled={pagination.page === 1}
                       className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      ←
                     </button>
+                    {/* Page numbers */}
+                    <span className="px-3 py-2 text-sm font-medium">
+                      Page {pagination.page} sur {pagination.totalPages}
+                    </span>
                     <button
                       onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                       disabled={pagination.page === pagination.totalPages}
                       className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      →
                     </button>
                   </div>
                 </div>

@@ -1,43 +1,45 @@
 import axios from "axios";
 
-// Configuration basée sur l'environnement
-const getApiUrl = () => {
-  const env = import.meta.env.VITE_APP_ENV || 'development';
-  
-  if (env === 'production') {
-    return import.meta.env.VITE_API_URL_PRODUCTION || 'https://gestion-caisse.onrender.com/api';
+const getBaseURL = () => {
+  if (typeof window === 'undefined') {
+    return 'https://gestion-caisse.onrender.com/api';
   }
   
-  return import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+  const { hostname } = window.location;
+  
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('192.168') || hostname.includes('10.0')) {
+    return 'http://localhost:3000/api';
+  }
+  
+  return 'https://gestion-caisse.onrender.com/api';
 };
 
 const API = axios.create({
-  baseURL: getApiUrl()
+  baseURL: getBaseURL(),
+  timeout: 15000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
 
-// Intercepteur pour ajouter le token d'authentification
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Intercepteur pour gérer les erreurs
 API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expiré ou invalide
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/';
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      window.location.href = "/";
     }
     return Promise.reject(error);
   }

@@ -15,7 +15,8 @@ import {
   CheckCircle,
   Printer,
   LayoutGrid,
-  List
+  List,
+  RefreshCw
 } from "lucide-react";
 import Layout from "../components/Layout";
 import API from "../api/axios";
@@ -36,10 +37,21 @@ export default function Ventes() {
   const [printing, setPrinting] = useState(false);
   const [viewMode, setViewMode] = useState("grid"); // "grid" or "list"
   const [apiSuccess, setApiSuccess] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Nettoyer les données locales et recharger depuis la base
+  const refreshProduits = async () => {
+    setRefreshing(true);
+    // Vider le cache local des produits
+    localStorage.removeItem("cached_produits");
+    // Recharger depuis la base de données
+    await fetchData();
+    setRefreshing(false);
+  };
 
   const fetchData = async () => {
     try {
@@ -234,6 +246,12 @@ export default function Ventes() {
 
   return (
     <Layout>
+      {/* Header */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-800">Point de Vente</h1>
+        <p className="text-gray-500">Effectuez vos ventes</p>
+      </div>
+
       {/* Success Message */}
       {apiSuccess && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
@@ -289,6 +307,15 @@ export default function Ventes() {
                   <List className="w-5 h-5" />
                 </button>
               </div>
+              {/* Refresh Button */}
+              <button
+                onClick={refreshProduits}
+                disabled={refreshing}
+                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600 disabled:opacity-50"
+                title="Rafraîchir les produits"
+              >
+                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
             </div>
           </div>
 

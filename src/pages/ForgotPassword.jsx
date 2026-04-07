@@ -81,22 +81,33 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
+      console.log('[ForgotPassword] Envoi forgot-password:', { identifier: values.identifier });
+      
       // Appel API pour demander la réinitialisation du mot de passe
       const res = await API.post("/auth/forgot-password", {
         identifier: values.identifier,
       });
 
-      if (res.data.success) {
-        let successMsg = res.data.email 
+      console.log('[ForgotPassword] Réponse complète:', JSON.stringify(res.data, null, 2));
+
+      if (res.data && res.data.success) {
+        // Force l'affichage du succès
+        const successMsg = res.data.email 
           ? `Un code de vérification a été envoyé à ${res.data.email}`
           : "Un code de vérification a été envoyé à votre adresse email";
         
+        console.log('[ForgotPassword] Succès - Message:', successMsg);
         setApiSuccess(successMsg);
         setShowResetForm(true);
         setResetToken(res.data.token || "");
+        console.log('[ForgotPassword] Token:', res.data.token);
+      } else {
+        console.log('[ForgotPassword] Réponse sans succès:', res.data);
+        setApiError(res.data?.message || "Erreur inconnue");
       }
     } catch (error) {
-      console.error(error);
+      console.error('[ForgotPassword] Erreur complète:', error);
+      console.error('[ForgotPassword] Response:', error.response?.data);
       setApiError(error.response?.data?.message || "Erreur lors de la demande de réinitialisation");
     } finally {
       setLoading(false);
@@ -117,6 +128,26 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
+      // Validate token exists
+      if (!resetToken) {
+        setApiError("Session expirée. Veuillez redemander un code de vérification.");
+        setLoading(false);
+        return;
+      }
+      
+      // Validation du code
+      if (!resetValues.code || resetValues.code.length !== 6) {
+        setApiError("Le code de vérification doit contenir 6 chiffres.");
+        setLoading(false);
+        return;
+      }
+      
+      console.log('[ForgotPassword] Envoi reset-password:', {
+        tokenLength: resetToken.length,
+        codeLength: resetValues.code.length,
+        hasPassword: !!resetValues.newPassword
+      });
+      
       // Appel API pour réinitialiser le mot de passe
       const res = await API.post("/auth/reset-password", {
         token: resetToken,
@@ -132,8 +163,18 @@ export default function ForgotPassword() {
         }, 2000);
       }
     } catch (error) {
-      console.error(error);
-      setApiError(error.response?.data?.message || "Erreur lors de la réinitialisation du mot de passe");
+      console.error('[ForgotPassword] Erreur reset:', error);
+      console.error('[ForgotPassword] Response:', error.response?.data);
+      
+      // Afficher le message d'erreur du serveur si disponible
+      const serverMessage = error.response?.data?.message;
+      if (serverMessage) {
+        setApiError(serverMessage);
+      } else if (error.response?.status === 400) {
+        setApiError("Code invalide ou expiré. Veuillez redemander un code.");
+      } else {
+        setApiError("Erreur lors de la réinitialisation du mot de passe");
+      }
     } finally {
       setLoading(false);
     }
@@ -252,40 +293,45 @@ export default function ForgotPassword() {
               Entrez votre email pour réinitialiser votre mot de passe
             </p>
             
-            {/* Messages d'erreur/succès */}
-            {apiError && (
-              <Alert 
-                type="error" 
-                message={apiError} 
-                onClose={() => setApiError("")}
-                className="w-full max-w-sm mb-4"
-              />
-            )}
-            
-            {apiSuccess && (
-              <Alert 
-                type="success" 
-                message={apiSuccess} 
-                onClose={() => setApiSuccess("")}
-                className="w-full max-w-sm mb-4"
-              />
-            )}
+            {/* Messages d'erreur/succès - VERSION FORCÉE */}
+            <div data-testid="messages-container">
+              {apiError && (
+                <div className="bg-red-500 text-white p-4 rounded-lg mb-4 flex items-center" role="alert">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="flex-1">{apiError}</span>
+                  <button onClick={() => setApiError("")} className="ml-4 text-white hover:text-gray-200" type="button">✕</button>
+                </div>
+              )}
+              
+              {apiSuccess && (
+                <div className="bg-green-500 text-white p-4 rounded-lg mb-4 flex items-center" role="alert">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="flex-1">{apiSuccess}</span>
+                  <button onClick={() => setApiSuccess("")} className="ml-4 text-white hover:text-gray-200" type="button">✕</button>
+                </div>
+              )}
+            </div>
             
             <form onSubmit={handleSubmitIdentifier} noValidate className="w-full max-w-sm flex flex-col gap-4">
               <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
                 <FiMail className="text-orange-500" />
+                <span>Entrez votre email</span>
               </div>
               
               <FormInput
-                label="Email"
+                label="Entrez l'Email"
                 name="identifier"
-                type="email"
+                type="text"
                 value={values.identifier}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 error={errors.identifier}
                 touched={touched.identifier}
-                placeholder="votre@email.com..."
+                placeholder="votre@email.com"
                 required
               />
               

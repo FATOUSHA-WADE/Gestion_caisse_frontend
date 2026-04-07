@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Dropdown animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
 /* CSS Variables for theming */
 :root {
   /* Light theme (default) */
@@ -17,9 +33,47 @@
   --sidebar-bg: #222222;
   --sidebar-text: #ffffff;
   --sidebar-hover: #333333;
-  --sidebar-active: #f97316;
+  --sidebar-active: var(--theme-primary);
   --card-bg: #ffffff;
   --hover-bg: #f9fafb;
+  /* Theme primary color - will be updated dynamically */
+  --theme-primary: #f97316;
+  --theme-primary-rgb: 249, 115, 22;
+}
+
+/* Utility class for theme primary color */
+.bg-theme-primary {
+  background-color: var(--theme-primary);
+}
+
+.text-theme-primary {
+  color: var(--theme-primary);
+}
+
+.border-theme-primary {
+  border-color: var(--theme-primary);
+}
+
+/* Hover states with theme color */
+.hover\:bg-theme-primary:hover {
+  background-color: var(--theme-primary);
+}
+
+.hover\:text-theme-primary:hover {
+  color: var(--theme-primary);
+}
+
+/* Theme color with opacity */
+.bg-theme-primary\/10 {
+  background-color: rgba(var(--theme-primary-rgb), 0.1);
+}
+
+.bg-theme-primary\/20 {
+  background-color: rgba(var(--theme-primary-rgb), 0.2);
+}
+
+.text-theme-primary\/80 {
+  color: rgba(var(--theme-primary-rgb), 0.8);
 }
 
 .dark {
@@ -36,9 +90,22 @@
   --sidebar-bg: #0f172a;
   --sidebar-text: #e2e8f0;
   --sidebar-hover: #1e293b;
-  --sidebar-active: #f97316;
+  --sidebar-active: var(--theme-primary);
   --card-bg: #1e293b;
   --hover-bg: #334155;
+}
+
+/* Dark mode theme primary - inherits from CSS variable */
+.dark .bg-theme-primary {
+  background-color: var(--theme-primary);
+}
+
+.dark .text-theme-primary {
+  color: var(--theme-primary);
+}
+
+.dark .border-theme-primary {
+  border-color: var(--theme-primary);
 }
 
 /* Base styles using CSS variables */
@@ -47,8 +114,8 @@ body {
   color: var(--text-primary);
 }
 
-/* Utility classes for theme colors */
-.bg-theme-primary {
+/* Utility classes for background colors (Light/Dark theme) */
+.bg-theme-bg {
   background-color: var(--bg-primary);
 }
 
@@ -60,7 +127,7 @@ body {
   background-color: var(--bg-tertiary);
 }
 
-.text-theme-primary {
+.text-theme-text {
   color: var(--text-primary);
 }
 

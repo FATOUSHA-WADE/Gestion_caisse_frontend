@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Layout from "../components/Layout";
 import API from "../api/axios";
+import { getUploadUrl } from "../utils/apiConfig";
 import { FormInput, Button, Alert, useToast, ConfirmModal } from "../components/ui";
 import { useFormValidation } from "../hooks/useFormValidation";
 
@@ -57,7 +58,7 @@ export default function Utilisateurs() {
   const [roleFilter, setRoleFilter] = useState("");
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 7,
     total: 0,
     totalPages: 0
   });
@@ -184,7 +185,18 @@ export default function Utilisateurs() {
       toast.success(editingUser ? "Utilisateur modifié avec succès" : "Utilisateur créé avec succès");
     } catch (error) {
       console.error("Erreur:", error);
-      setApiError(error.response?.data?.message || "Une erreur s'est produite");
+      // Handle different error status codes gracefully
+      if (error.response?.status === 400) {
+        setApiError("Données invalides. Veuillez vérifier tous les champs.");
+      } else if (error.response?.status === 409) {
+        setApiError("Un utilisateur avec ce téléphone ou email existe déjà.");
+      } else if (error.response?.status === 401) {
+        setApiError("Session expirée. Veuillez vous reconnecter.");
+      } else if (error.response?.status === 403) {
+        setApiError("Vous n'avez pas l'autorisation d'effectuer cette action.");
+      } else {
+        setApiError(error.response?.data?.message || "Une erreur s'est produite");
+      }
     }
   };
 
@@ -407,7 +419,7 @@ export default function Utilisateurs() {
                           <div className="w-10 h-10 bg-orange-100 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0">
                             {u.photo ? (
                               <img
-                                src={u.photo.startsWith('http') ? u.photo : `http://localhost:3000/uploads/${u.photo}`}
+                                src={getUploadUrl(u.photo)}
                                 alt={u.nom}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
@@ -498,7 +510,7 @@ export default function Utilisateurs() {
               </table>
 
               {/* Pagination */}
-              {pagination.totalPages > 1 && (
+              {pagination.total >= 7 && (
                 <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
                   <div className="text-sm text-gray-500">
                     Affichage de {(pagination.page - 1) * pagination.limit + 1} à {Math.min(pagination.page * pagination.limit, pagination.total)} sur {pagination.total}

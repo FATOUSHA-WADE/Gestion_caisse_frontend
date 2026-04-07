@@ -295,7 +295,7 @@ export default function Rapports() {
         {/* Evolution Chart */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Évolution du CA & Bénéfices</h2>
-          <div className="h-80 min-h-[300px]">
+          <div style={{ width: '100%', height: 320 }}>
             {evolutionData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={evolutionData}>
@@ -306,8 +306,8 @@ export default function Rapports() {
                     formatter={(value) => formatCurrency(value)}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="ca" name="CA" stroke="#FFA726" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="benefice" name="Bénéfice" stroke="#42A5F5" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="ca" name="CA" stroke="#FFA726" strokeWidth={2} dot={false} isAnimationActive={false} />
+                  <Line type="monotone" dataKey="benefice" name="Bénéfice" stroke="#42A5F5" strokeWidth={2} dot={false} isAnimationActive={false} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (

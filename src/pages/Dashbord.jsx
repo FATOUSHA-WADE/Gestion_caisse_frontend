@@ -23,30 +23,38 @@ export default function Dashboard() {
   const [weeklySales, setWeeklySales] = useState([]);
   const [categorySales, setCategorySales] = useState([]);
   const [selectedSale, setSelectedSale] = useState(null);
+  const [lastRefresh, setLastRefresh] = useState(null);
 
-  // Get first name from user's full name
   const getFirstName = (fullName) => {
     if (!fullName) return "";
     return fullName.split(" ")[0];
   };
 
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await API.get("/dashboard/stats", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setStats(res.data.data);
+      setWeeklySales(res.data.data.ventesSemaine || []);
+      setCategorySales(res.data.data.ventesParCategorie || []);
+      setLastRefresh(new Date());
+    } catch (error) {
+      console.error("Erreur:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await API.get("/dashboard/stats", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setStats(res.data.data);
-        setWeeklySales(res.data.data.ventesSemaine || []);
-        setCategorySales(res.data.data.ventesParCategorie || []);
-      } catch (error) {
-        console.error("Erreur:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchStats();
+    
+    const interval = setInterval(() => {
+      fetchStats();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const formatCurrency = (value) => {
@@ -148,15 +156,46 @@ export default function Dashboard() {
     };
   });
 
+  // Fonction pour calculer les ticks arrondis
+  const calculateNiceTicks = (maxValue) => {
+    if (!maxValue || maxValue === 0) return [0, 1000];
+    const magnitude = Math.floor(Math.log10(maxValue));
+    const power = Math.pow(10, magnitude);
+    const normalized = maxValue / power;
+    
+    let niceMax;
+    if (normalized < 2) niceMax = 2;
+    else if (normalized < 5) niceMax = 5;
+    else niceMax = 10;
+    
+    const ticks = [];
+    for (let i = 0; i <= niceMax; i++) {
+      ticks.push(i * power);
+    }
+    return ticks;
+  };
+
+  const maxMontant = salesByDay.length > 0 
+    ? Math.max(...salesByDay.map(d => d.montant)) 
+    : 0;
+  const niceTicks = calculateNiceTicks(maxMontant);
+
   return (
     <Layout>
       <div className="space-y-4 sm:space-y-6">
         {/* Page Header */}
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
-            Bonjour{user?.nom ? `, ${getFirstName(user.nom)}` : ""}
-          </h1>
-          <p className="text-gray-500 text-sm sm:text-base">Bienvenue à GestiCom</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
+              Bonjour{user?.nom ? `, ${getFirstName(user.nom)}` : ""}
+            </h1>
+            <p className="text-gray-500 text-sm sm:text-base">Bienvenue à GestiCom</p>
+          </div>
+          {lastRefresh && (
+            <p className="text-xs text-gray-400">
+              Actualisé: {lastRefresh.toLocaleTimeString("fr-FR")}
+            </p>
+          )}
         </div>
 
         {/* Stats Cards */}
@@ -195,22 +234,35 @@ export default function Dashboard() {
           {/* Sales Chart */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-5">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Ventes de la semaine</h2>
-            <div className="h-48 sm:h-64 min-h-[200px]">
+            <div style={{ width: '100%', height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={salesByDay} barCategoryGap="20%">
                   <XAxis dataKey="day" stroke="#6b7280" fontSize={12} />
-                  <YAxis stroke="#6b7280" fontSize={12} />
+                  <YAxis 
+                    stroke="#6b7280" 
+                    fontSize={11}
+                    type="number"
+                    ticks={niceTicks}
+                    tickFormatter={(value) => {
+                      if (value >= 1000000000) return (value / 1000000000) + 'Mrd';
+                      if (value >= 1000000) return (value / 1000000) + 'M';
+                      if (value >= 1000) return (value / 1000) + 'K';
+                      return value.toString();
+                    }}
+                    domain={[0, Math.max(...niceTicks)]}
+                    allowDecimals={false}
+                    interval={0}
+                  />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-                    formatter={(value) => [value, 'Ventes']}
+                    formatter={(value) => [formatCurrency(value), 'Montant']}
                   />
                   <Bar 
-                    dataKey="ventes" 
+                    dataKey="montant" 
                     fill="#FFA726" 
                     radius={[6, 6, 0, 0]} 
-                    name="Ventes"
-                    barSize={65}
-                    shadow={{ stroke: '#e65100', strokeWidth: 2, fill: '#FFA726' }}
+                    name="Montant"
+                    isAnimationActive={false}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -220,7 +272,7 @@ export default function Dashboard() {
           {/* Category Sales Chart */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Ventes par catégorie</h2>
-            <div className="h-64">
+            <div style={{ width: '100%', height: 280 }}>
               {categorySales.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -235,6 +287,7 @@ export default function Dashboard() {
                       nameKey="categorie"
                       label={({ categorie, percent }) => `${categorie} ${(percent * 100).toFixed(0)}%`}
                       labelLine={false}
+                      isAnimationActive={false}
                     >
                       {categorySales.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={categoryColors[index % categoryColors.length]} />

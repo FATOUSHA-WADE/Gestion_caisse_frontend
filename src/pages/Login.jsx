@@ -55,16 +55,29 @@ export default function Login() {
     setLoading(true);
 
     try {
+      console.log('[Login] Tentative de connexion...');
       const res = await API.post("/auth/login", {
         telephone: values.telephone,
         password: values.password,
       });
 
-      login(res.data.data.token, res.data.data.user);
-      navigate("/dashboard");
+      console.log('[Login] Réponse:', res.data);
+      
+      if (res.data.success) {
+        login(res.data.data.token, res.data.data.user);
+        navigate("/ventes", { replace: true });
+      }
     } catch (error) {
-      console.error(error);
-      setApiError(error.response?.data?.message || "Erreur de connexion. Veuillez vérifier vos identifiants.");
+      console.error('[Login] Erreur:', error);
+      console.error('[Login] Response:', error.response?.data);
+      
+      if (error.response?.status === 401) {
+        setApiError("Identifiants incorrects. Veuillez vérifier votre numéro de téléphone et votre mot de passe.");
+      } else if (error.response?.data?.message) {
+        setApiError(error.response.data.message);
+      } else {
+        setApiError("Erreur de connexion. Veuillez réessayer.");
+      }
     } finally {
       setLoading(false);
     }
@@ -122,7 +135,7 @@ export default function Login() {
             onBlur={handleBlur}
             error={errors.telephone}
             touched={touched.telephone}
-            placeholder="numéro de téléphone..."
+            placeholder="77.. ou +22177..."
             required
           />
           

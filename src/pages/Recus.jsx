@@ -17,7 +17,7 @@ export default function Recus() {
   const [selectedRecu, setSelectedRecu] = useState(null);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 7,
     total: 0,
     totalPages: 0
   });
@@ -56,6 +56,35 @@ export default function Recus() {
     } catch (error) {
       console.error("Erreur:", error);
       alert("Erreur lors de la récupération du reçu");
+    }
+  };
+
+  const downloadRecu = async (venteId) => {
+    try {
+      const token = localStorage.getItem("token");
+      // First generate the receipt if it doesn't exist
+      await API.get(`/recus/${venteId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      // Then download the PDF
+      const response = await API.get(`/recus/${venteId}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob',
+      });
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `recu-${venteId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Erreur download:", error);
+      alert("Erreur lors du téléchargement du reçu");
     }
   };
 
@@ -180,6 +209,7 @@ export default function Recus() {
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
+                            onClick={() => downloadRecu(recu.id)}
                             className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                             title="Télécharger le reçu"
                           >
@@ -193,7 +223,7 @@ export default function Recus() {
               </table>
 
               {/* Pagination */}
-              {pagination.totalPages > 1 && (
+              {pagination.total >= 7 && (
                 <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
                   <div className="text-sm text-gray-500">
                     Affichage de {startIndex + 1} à {Math.min(startIndex + pagination.limit, pagination.total)} sur {pagination.total}
@@ -296,7 +326,10 @@ export default function Recus() {
                   >
                     Fermer
                   </button>
-                  <button className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center justify-center gap-2">
+                  <button 
+                    onClick={() => downloadRecu(selectedRecu.id)}
+                    className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center justify-center gap-2"
+                  >
                     <Download className="w-4 h-4" />
                     Télécharger PDF
                   </button>

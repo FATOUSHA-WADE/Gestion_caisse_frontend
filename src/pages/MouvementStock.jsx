@@ -24,7 +24,7 @@ export default function MouvementStock() {
   const [typeFilter, setTypeFilter] = useState("");
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 7,
     total: 0,
     totalPages: 0
   });
@@ -348,7 +348,7 @@ export default function MouvementStock() {
             </table>
 
             {/* Pagination */}
-            {pagination.totalPages > 1 && (
+            {pagination.total >= 7 && (
               <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
                 <div className="text-sm text-gray-500">
                   Affichage de {(pagination.page - 1) * pagination.limit + 1} à {Math.min(pagination.page * pagination.limit, pagination.total)} sur {pagination.total}

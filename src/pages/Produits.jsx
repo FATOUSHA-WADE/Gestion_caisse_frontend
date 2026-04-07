@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useContext } from "react";
+import { useEffect, useState, useRef, useContext, useCallback } from "react";
 import { 
   Plus, 
   Search, 
@@ -12,9 +12,9 @@ import {
   ChevronRight,
   LayoutGrid,
   List,
-  Camera,
   Upload,
-  XCircle
+  XCircle,
+  Camera
 } from "lucide-react";
 import Layout from "../components/Layout";
 import API from "../api/axios";
@@ -33,10 +33,10 @@ export default function Produits() {
   const [selectedProduit, setSelectedProduit] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [viewMode, setViewMode] = useState("grid"); // "grid" ou "list"
+  const [viewMode, setViewMode] = useState("list"); // "grid" ou "list"
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 12,
+    limit: 7,
     total: 0,
     totalPages: 0
   });
@@ -56,7 +56,6 @@ export default function Produits() {
   // Camera state
   const [showCamera, setShowCamera] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
-  const [cameraLoading, setCameraLoading] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [videoReady, setVideoReady] = useState(false);
   
@@ -67,179 +66,84 @@ export default function Produits() {
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Start camera - VERSION AMÉLIORÉE
-  const startCamera = async () => {
+  // Start camera - instant
+  const _startCamera = async () => {
+    setCameraError(null);
+    setShowCamera(true);
+    setVideoReady(false);
+    
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError("Caméra non supportée.");
+      setShowCamera(false);
+      return;
+    }
+    
     try {
-      setCameraError(null);
-      setCameraLoading(true);
-      
-      // Stop any existing stream
-      if (videoRef.current && videoRef.current.srcObject) {
-        const tracks = videoRef.current.srcObject.getTracks();
-        tracks.forEach(track => track.stop());
-      }
-      
-      // Check if navigator.mediaDevices is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setCameraError("Votre navigateur ne prend pas en charge l'accès à la caméra.");
-        setCameraLoading(false);
-        return;
-      }
-      
-      // Try different camera configurations
-      const cameraConfigs = [
-        // Try any available camera first (most compatible)
-        { video: true, audio: false },
-        // Try back camera
-        { video: { facingMode: 'environment' }, audio: false },
-        // Try front camera
-        { video: { facingMode: 'user' }, audio: false },
-        // Try with lower resolution
-        { video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false }
-      ];
-      
-      let stream = null;
-      let lastError = null;
-      
-      for (const config of cameraConfigs) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia(config);
-          break; // Success!
-        } catch (err) {
-          lastError = err;
-          // Continue to next config
-        }
-      }
-      
-      if (!stream) {
-        // All configs failed - permission was denied
-        // This usually means the user previously denied permission
-        // The browser will keep denying until manually reset
-        
-        setCameraError(
-          "🚫 CAMÉRA BLOQUÉE!\n\n" +
-          "Le navigateur a refusé l'accès à la caméra.\n\n" +
-          "Pour résoudre:\n" +
-          "1. Ouvrez: chrome://settings/content/camera\n" +
-          "2. Cherchez votre site dans \"Bloqués\"\n" +
-          "3. Cliquez sur les 3 points → Supprimer\n" +
-          "4. Rechargez cette page\n\n" +
-          "Sinon: Paramètres → Confidentialité → Caméra → Supprimer le site\n\n" +
-          "Erreur: " + (lastError?.message || "Permission refusée")
-        );
-        
-        setCameraLoading(false);
-        return;
-      }
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' }, 
+        audio: false 
+      });
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        
-        // Wait for video to load
-        await new Promise((resolve) => {
-          const video = videoRef.current;
-          if (video.readyState >= 2) {
-            resolve();
-          } else {
-            video.onloadedmetadata = () => resolve();
-          }
-          setTimeout(resolve, 2000);
-        });
-        
         setVideoReady(true);
-        
-        setShowCamera(true);
       }
     } catch (error) {
       console.error("Erreur caméra:", error);
-      setCameraError("Erreur caméra: " + error.message);
-    } finally {
-      setCameraLoading(false);
+      if (error.name === 'NotAllowedError') {
+        setCameraError("Accès caméra refusé.");
+      } else if (error.name === 'NotFoundError') {
+        setCameraError("Aucune caméra trouvée.");
+      } else {
+        setCameraError("Erreur: " + error.message);
+      }
+      setShowCamera(false);
     }
   };
 
-  // Capture photo - FIXED VERSION
-  const capturePhoto = async () => {
+  // Capture photo
+  const capturePhoto = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     
-    if (!video) {
-      console.error("No video element");
-      return;
-    }
+    if (!video || !canvas) return;
     
-    if (!canvas) {
-      console.error("No canvas element");
-      return;
-    }
-    
-    // Check if video is ready
-    if (video.readyState !== 4) {
-      console.error("Video not ready:", video.readyState);
-      // Try waiting a bit
-      await new Promise(r => setTimeout(r, 500));
-    }
-    
-    // Get actual dimensions
     const width = video.videoWidth || video.clientWidth || 640;
     const height = video.videoHeight || video.clientHeight || 480;
     
     if (width === 0 || height === 0) {
-      console.error("Invalid dimensions");
-      setCameraError("Vidéo non prête. Réessayez dans un instant.");
+      setCameraError("Vidéo non prête.");
       return;
     }
     
-    // Set canvas size
     canvas.width = width;
     canvas.height = height;
     
-    // Draw video frame to canvas
     const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      console.error("No canvas context");
-      return;
-    }
+    if (!ctx) return;
     
-    // Draw the image
     ctx.drawImage(video, 0, 0, width, height);
     
-    // Get image data URL
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-    
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
     if (!dataUrl) {
-      setCameraError("Erreur lors de la capture");
+      setCameraError("Erreur de capture");
       return;
     }
     
-    // Convert to blob and file
-    try {
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
-      const file = new File([blob], `produit-${Date.now()}.jpg`, { 
-        type: 'image/jpeg',
-        lastModified: Date.now()
-      });
-      
-      // Update form
-      setFormData(prev => ({ ...prev, image: file }));
-      setImagePreview(dataUrl);
-      
-      // Stop camera
-      if (video.srcObject) {
-        const tracks = video.srcObject.getTracks();
-        tracks.forEach(track => track.stop());
-        video.srcObject = null;
-      }
-      setShowCamera(false);
-      
-    } catch (err) {
-      console.error("Capture error:", err);
-      setCameraError("Erreur: " + err.message);
-    }
+    fetch(dataUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        const file = new File([blob], `produit-${Date.now()}.jpg`, { 
+          type: 'image/jpeg',
+          lastModified: Date.now()
+        });
+        
+        setFormData(prev => ({ ...prev, image: file }));
+        setImagePreview(dataUrl);
+        stopCamera();
+      })
+      .catch(err => setCameraError("Erreur: " + err.message));
   };
-  
-  // End of camera functions
 
   // Stop camera
   const stopCamera = () => {
@@ -274,18 +178,20 @@ export default function Produits() {
     }
   };
 
-  useEffect(() => {
-    fetchProduits();
-    fetchCategories();
-  }, [pagination.page, selectedCategory]);
-
-  const fetchProduits = async () => {
+  // Fetch products with pagination
+  const fetchProduits = useCallback(async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem("token");
       const params = new URLSearchParams({
         page: pagination.page,
         limit: pagination.limit,
       });
+      
+      // Add search term for server-side filtering
+      if (searchTerm) {
+        params.append("nom", searchTerm);
+      }
       
       if (selectedCategory) {
         params.append("categorieId", selectedCategory);
@@ -295,12 +201,12 @@ export default function Produits() {
         headers: { Authorization: `Bearer ${token}` },
       });
       
-      setProduits(res.data.data.produits || res.data.data || []);
-      if (res.data.data.meta) {
+      setProduits(res.data.data || []);
+      if (res.data.meta) {
         setPagination(prev => ({
           ...prev,
-          total: res.data.data.meta.total || 0,
-          totalPages: res.data.data.meta.totalPages || 0
+          total: res.data.meta.total || 0,
+          totalPages: res.data.meta.totalPages || 0
         }));
       }
     } catch (error) {
@@ -308,7 +214,13 @@ export default function Produits() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit, searchTerm, selectedCategory]);
+
+  // Initial fetch and refetch when page/category/search changes
+  useEffect(() => {
+    fetchProduits();
+    fetchCategories();
+  }, [pagination.page, selectedCategory, searchTerm]);
 
   const fetchCategories = async () => {
     try {
@@ -446,24 +358,33 @@ export default function Produits() {
       image: null,
     });
     setErrors({});
-    // Reset camera state
-    stopCamera();
+    // Reset image state
     setImagePreview(null);
     setCameraError(null);
+    setShowCamera(false);
+    setVideoReady(false);
+    if (videoRef.current && videoRef.current.srcObject) {
+      const tracks = videoRef.current.srcObject.getTracks();
+      tracks.forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const filteredProduits = produits.filter((produit) =>
-    produit.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    produit.sku?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Server-side filtering now - no client-side filter needed
+  const filteredProduits = produits;
 
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
     if (imagePath.startsWith("http")) return imagePath;
-    return `http://localhost:3000/${imagePath}`;
+    
+    const { hostname } = window.location;
+    const baseURL = (hostname === 'localhost' || hostname === '127.0.0.1') 
+      ? 'http://localhost:3000' 
+      : 'https://gestion-caisse.onrender.com';
+    return `${baseURL}/${imagePath}`;
   };
 
   const isLowStock = (produit) => {
@@ -504,7 +425,10 @@ export default function Produits() {
                 type="text"
                 placeholder="Rechercher un produit..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPagination(prev => ({ ...prev, page: 1 }));
+                }}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
@@ -543,6 +467,7 @@ export default function Produits() {
           </div>
         </div>
 
+
         {/* Affichage produits selon le mode */}
         {loading ? (
           <div className="flex items-center justify-center h-64">
@@ -554,55 +479,86 @@ export default function Produits() {
             <p className="text-gray-500">Aucun produit trouvé</p>
           </div>
         ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {filteredProduits.map((produit) => (
-              <div key={produit.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col hover:shadow-md transition-all">
-                <div className="aspect-square bg-gray-100 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
-                  {produit.image ? (
-                    <img
-                      src={getImageUrl(produit.image)}
-                      alt={produit.nom}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <ImageIcon className="w-10 h-10 text-gray-300" />
-                  )}
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {filteredProduits.map((produit) => (
+                <div key={produit.id} className="bg-white rounded-lg shadow-sm border border-gray-100 p-2 flex flex-col hover:shadow-md transition-all">
+                  <div className="aspect-square bg-gray-100 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
+                    {produit.image ? (
+                      <img
+                        src={getImageUrl(produit.image)}
+                        alt={produit.nom}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling?.style?.display === 'flex' || (e.target.nextElementSibling && (e.target.nextElementSibling.style.display = 'flex'));
+                        }}
+                      />
+                    ) : null}
+                    <ImageIcon className={`w-6 h-6 text-gray-300 ${produit.image ? 'hidden' : ''}`} />
+                  </div>
+                  <div className="font-semibold text-sm text-gray-800 truncate">{produit.nom}</div>
+                  <div className="text-xs text-gray-500 mb-1">SKU: {produit.sku}</div>
+                  <div className="text-xs font-bold text-orange-600">{new Intl.NumberFormat("fr-FR").format(produit.prixVente)} F</div>
+                  <div className="text-xs text-gray-600">Stock: <span className={isLowStock(produit) ? "text-orange-600 font-semibold" : ""}>{produit.stock}</span></div>
+                  <div className="flex gap-1 mt-auto pt-2">
+                    <button
+                      onClick={() => openDetailModal(produit)}
+                      className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Voir les détails"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
+                    {user?.role !== 'caissier' && (
+                      <>
+                        <button
+                          onClick={() => openEditModal(produit)}
+                          className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                          title="Modifier"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(produit.id)}
+                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="font-semibold text-gray-800 truncate">{produit.nom}</div>
-                <div className="text-xs text-gray-500 mb-1">SKU: {produit.sku}</div>
-                <div className="text-xs text-gray-500 mb-1">Catégorie: {getCategoryName(produit.categorieId)}</div>
-                <div className="text-sm font-bold text-orange-600 mb-1">{new Intl.NumberFormat("fr-FR").format(produit.prixVente)} F</div>
-                <div className="text-xs text-gray-600 mb-2">Stock: <span className={isLowStock(produit) ? "text-orange-600 font-semibold" : ""}>{produit.stock}</span></div>
-                <div className="flex gap-2 mt-auto">
+              ))}
+            </div>
+            {/* Pagination for Grid View */}
+            {pagination.total >= 7 && (
+              <div className="flex items-center justify-between bg-white rounded-lg shadow-sm border border-gray-100 px-4 py-3 mt-4">
+                <div className="text-sm text-gray-500">
+                  Affichage de {(pagination.page - 1) * pagination.limit + 1} à {Math.min(pagination.page * pagination.limit, pagination.total)} sur {pagination.total}
+                </div>
+                <div className="flex gap-2">
                   <button
-                    onClick={() => openDetailModal(produit)}
-                    className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Voir les détails"
+                    onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                    disabled={pagination.page === 1}
+                    className="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
-                    <Eye className="w-4 h-4" />
+                    ←
                   </button>
-                  {user?.role !== 'caissier' && (
-                    <>
-                      <button
-                        onClick={() => openEditModal(produit)}
-                        className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                        title="Modifier"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(produit.id)}
-                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
+                  <span className="px-3 py-1 text-sm text-gray-600">
+                    Page {pagination.page} sur {pagination.totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                    disabled={pagination.page === pagination.totalPages}
+                    className="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    →
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         ) : (
           <>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -643,14 +599,16 @@ export default function Produits() {
                               alt={produit.nom}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'/%3E%3C/svg%3E";
+                                e.target.style.display = 'none';
+                                if (e.target.nextSibling) {
+                                  e.target.nextSibling.style.display = 'flex';
+                                }
                               }}
                             />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <ImageIcon className="w-6 h-6 text-gray-300" />
-                            </div>
-                          )}
+                          ) : null}
+                          <div className={`w-full h-full flex items-center justify-center ${produit.image ? 'hidden' : ''}`}>
+                            <ImageIcon className="w-6 h-6 text-gray-300" />
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -708,7 +666,7 @@ export default function Produits() {
               </table>
 
               {/* Pagination */}
-              {pagination.totalPages > 1 && (
+              {pagination.total >= 7 && (
                 <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
                   <div className="text-sm text-gray-500">
                     Affichage de {(pagination.page - 1) * pagination.limit + 1} à {Math.min(pagination.page * pagination.limit, pagination.total)} sur {pagination.total}
@@ -847,66 +805,61 @@ export default function Produits() {
                     </div>
                   )}
                   
-                  {/* Image Preview or Camera View */}
-                  {showCamera ? (
-                    <div className="relative bg-black rounded-lg overflow-hidden mb-3">
-                      {cameraLoading ? (
-                        <div className="w-full h-64 flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+                  {/* Camera Preview - Modal popup */}
+                  {showCamera && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                      <div className="bg-white rounded-xl p-4 w-full max-w-md">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-semibold text-gray-800">Prendre une photo</h3>
+                          <button 
+                            type="button"
+                            onClick={() => stopCamera()}
+                            className="p-1 hover:bg-gray-100 rounded"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
                         </div>
-                      ) : (
-                        <>
+                        
+                        <div className="relative bg-black rounded-lg overflow-hidden mb-3">
                           <video 
                             ref={videoRef} 
                             autoPlay 
                             playsInline 
                             muted
-                            className="w-full h-64 object-cover pointer-events-none"
-                            onError={(e) => {
-                              console.error("Video error:", e);
-                              setCameraError("Erreur lors du chargement de la vidéo.");
-                            }}
+                            className="w-full h-64 object-cover"
                           />
                           <canvas ref={canvasRef} className="hidden" />
-                          {/* Camera guide overlay */}
-                          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                            <div className="w-48 h-48 border-2 border-white/50 rounded-lg"></div>
-                          </div>
-                          <div className="absolute top-3 left-3 bg-black/50 text-white px-3 py-1 rounded-full text-xs">
-                            📷 Alignez le produit dans le cadre
-                          </div>
-                          {!videoReady ? (
-                            <div className="absolute bottom-16 left-0 right-0 flex justify-center">
-                              <span className="text-white text-sm bg-black/50 px-3 py-1 rounded-full">
-                                ⏳ Préparation...
-                              </span>
+                          {videoReady && (
+                            <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                              ✓ Prêt
                             </div>
-                          ) : null}
-                          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4 z-\[9999\] pointer-events-auto">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                  capturePhoto();
-                                }}
-                                className="cursor-pointer select-none active:scale-95 transition-transform px-10 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full font-bold flex items-center gap-3 shadow-xl border-2 border-white"
-                            >
-                                <Camera className="w-6 h-6" />
-                                <span className="text-lg">CAPTURER</span>
-                            </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  stopCamera();
-                                }}
-                                className="cursor-pointer px-6 py-4 bg-gray-700/80 text-white rounded-full font-medium hover:bg-gray-600"
-                              >
-                                <X className="w-5 h-5" />
-                              </button>
-                            </div>
-                        </>
-                      )}
+                          )}
+                        </div>
+                        
+                        <div className="flex gap-3">
+                          <button
+                            type="button"
+                            onClick={() => capturePhoto()}
+                            disabled={!videoReady}
+                            className="flex-1 px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Camera className="w-5 h-5" />
+                            Capturer
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => stopCamera()}
+                            className="px-4 py-3 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50"
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  ) : imagePreview || formData.image ? (
+                  )}
+
+                  {/* Image Preview */}
+                  {imagePreview || formData.image ? (
                     <div className="relative mb-3">
                       <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                         <img 
@@ -922,36 +875,30 @@ export default function Produits() {
                       >
                         <XCircle className="w-5 h-5" />
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => { clearImage(); startCamera(); }}
-                        className="absolute bottom-2 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-orange-500 text-white rounded-full font-medium flex items-center gap-2 hover:bg-orange-600"
-                      >
-                        <Camera className="w-4 h-4" />
-                        Reprendre la photo
-                      </button>
                     </div>
                   ) : null}
                   
                   {/* Buttons */}
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => startCamera()}
-                      className="flex-1 px-4 py-3 bg-orange-100 text-orange-700 border border-orange-200 rounded-lg hover:bg-orange-200 flex items-center justify-center gap-2 font-medium"
-                    >
-                      <Camera className="w-5 h-5" />
-                      Caméra
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-200 flex items-center justify-center gap-2 font-medium"
-                    >
-                      <Upload className="w-5 h-5" />
-                      Galerie
-                    </button>
-                  </div>
+                  {!showCamera && (
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => _startCamera()}
+                        className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-200 flex items-center justify-center gap-2 font-medium"
+                      >
+                        <Camera className="w-5 h-5" />
+                        Caméra
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-200 flex items-center justify-center gap-2 font-medium"
+                      >
+                        <Upload className="w-5 h-5" />
+                        Galerie
+                      </button>
+                    </div>
+                  )}
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1003,12 +950,17 @@ export default function Produits() {
                         src={getImageUrl(selectedProduit.image)}
                         alt={selectedProduit.nom}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          if (e.target.nextSibling) {
+                            e.target.nextSibling.style.display = 'flex';
+                          }
+                        }}
                       />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ImageIcon className="w-16 h-16 text-gray-300" />
-                      </div>
-                    )}
+                    ) : null}
+                    <div className={`w-full h-full flex items-center justify-center ${selectedProduit.image ? 'hidden' : ''}`}>
+                      <ImageIcon className="w-16 h-16 text-gray-300" />
+                    </div>
                   </div>
                 </div>
 
