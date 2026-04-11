@@ -1,21 +1,8 @@
 import axios from "axios";
-
-const getBaseURL = () => {
-  if (typeof window === 'undefined') {
-    return '/api';
-  }
-  
-  const { hostname } = window.location;
-  
-  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('192.168') || hostname.includes('10.0')) {
-    return '/api';
-  }
-  
-  return '/api';
-};
+import { API_BASE_URL } from "../utils/apiConfig";
 
 const API = axios.create({
-  baseURL: getBaseURL(),
+  baseURL: API_BASE_URL,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json'
