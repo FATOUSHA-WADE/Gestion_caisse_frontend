@@ -7,28 +7,10 @@ export default defineConfig({
   build: {
     target: 'esnext',
     minify: 'esbuild',
-    assetsDir: 'assets',
-    chunkSizeWarningLimit: 600,
-    publicDir: 'public',
+    sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'vendor-react';
-            }
-            if (id.includes('recharts')) {
-              return 'vendor-charts';
-            }
-            if (id.includes('xlsx') || id.includes('exceljs') || id.includes('jspdf')) {
-              return 'vendor-utils';
-            }
-            if (id.includes('axios')) {
-              return 'vendor-axios';
-            }
-            return 'vendor-misc';
-          }
-        },
+        manualChunks: undefined
       },
     },
   },
@@ -43,7 +25,5 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom', 'axios', 'recharts'],
-    exclude: []
   },
-  preload: true
 })
