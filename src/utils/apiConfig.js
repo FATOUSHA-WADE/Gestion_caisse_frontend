@@ -3,11 +3,11 @@
 const getApiBaseUrl = () => {
   // En développement local
   if (import.meta.env.DEV) {
-    return 'http://localhost:3000';
+    return 'http://localhost:3000/api';
   }
   
   // En production (Vercel), utiliser l'URL du backend Render
-  return 'https://gestion-caisse.onrender.com';
+  return 'https://gestion-caisse.onrender.com/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
