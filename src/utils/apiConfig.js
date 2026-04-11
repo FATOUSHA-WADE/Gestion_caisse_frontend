@@ -1,15 +1,13 @@
 // Configuration des URLs d'API pour le développement et la production
 
 const getApiBaseUrl = () => {
-  // En production (Vercel), utiliser l'URL du backend Render
-  if (typeof window !== 'undefined') {
-    const { hostname } = window.location;
-    if (hostname.includes('vercel.app')) {
-      return 'https://gestion-caisse.onrender.com';
-    }
+  // En développement local
+  if (import.meta.env.DEV) {
+    return 'http://localhost:3000';
   }
   
-  return 'http://localhost:3000';
+  // En production (Vercel), utiliser l'URL du backend Render
+  return 'https://gestion-caisse.onrender.com';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
