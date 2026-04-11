@@ -2,16 +2,16 @@ import axios from "axios";
 
 const getBaseURL = () => {
   if (typeof window === 'undefined') {
-    return 'https://gestion-caisse.onrender.com/api';
+    return '/api';
   }
   
   const { hostname } = window.location;
   
   if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('192.168') || hostname.includes('10.0')) {
-    return 'http://localhost:3000/api';
+    return '/api';
   }
   
-  return 'https://gestion-caisse.onrender.com/api';
+  return '/api';
 };
 
 const API = axios.create({
@@ -36,7 +36,9 @@ API.interceptors.request.use(
 API.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const isAuthRoute = error.config?.url?.includes('/auth/');
+    
+    if (error.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       window.location.href = "/";

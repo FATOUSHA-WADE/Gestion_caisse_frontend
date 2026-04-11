@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Layout from "../components/Layout";
 import API from "../api/axios";
+import { API_BASE_URL } from "../utils/apiConfig";
 
 export default function Ventes() {
   const [produits, setProduits] = useState([]);
@@ -38,6 +39,28 @@ export default function Ventes() {
   const [viewMode, setViewMode] = useState("grid"); // "grid" or "list"
   const [apiSuccess, setApiSuccess] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+
+  // Sauvegarder le panier dans localStorage
+  useEffect(() => {
+    if (cart.length > 0) {
+      localStorage.setItem("cart", JSON.stringify(cart));
+    }
+  }, [cart]);
+
+  // Restaurer le panier depuis localStorage au chargement
+  useEffect(() => {
+    const savedCart = localStorage.getItem("cart");
+    if (savedCart) {
+      try {
+        const parsedCart = JSON.parse(savedCart);
+        if (Array.isArray(parsedCart) && parsedCart.length > 0) {
+          setCart(parsedCart);
+        }
+      } catch {
+        localStorage.removeItem("cart");
+      }
+    }
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -91,14 +114,31 @@ export default function Ventes() {
     try {
       setPrinting(true);
       const token = localStorage.getItem("token");
-      const response = await API.get(
+      
+      // First, ensure the PDF is generated
+      await API.get(
         `/recus/${lastSale.id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      if (response.data.data?.urlPdf) {
-        window.open(`http://localhost:3000/${response.data.data.urlPdf}`, '_blank');
-      }
+      // Then download it directly
+      const response = await API.get(
+        `/recus/${lastSale.id}/pdf`,
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        }
+      );
+      
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `recu-${lastSale.reference || lastSale.id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Erreur impression:", err);
       alert("Erreur lors de l'impression du reçu");
@@ -150,6 +190,7 @@ export default function Ventes() {
 
   const clearCart = () => {
     setCart([]);
+    localStorage.removeItem("cart");
   };
 
   const cartTotal = cart.reduce(
@@ -157,7 +198,10 @@ export default function Ventes() {
     0
   );
 
-  const changeAmount = amountGiven ? Number(amountGiven) - cartTotal : 0;
+  const changeAmount = amountGiven ? Number(amountGiven) - cartTotal : -1;
+
+  const isInCart = (productId) => cart.some(item => item.id === productId);
+  const getCartItem = (productId) => cart.find(item => item.id === productId);
 
   const handlePayment = async () => {
     if (cart.length === 0) {
@@ -193,6 +237,7 @@ export default function Ventes() {
         setShowPaymentModal(false);
         setShowSuccessModal(true);
         setCart([]);
+        localStorage.removeItem("cart");
         setAmountGiven("");
         // Show success message
         setApiSuccess("Vente créée avec succès");
@@ -323,76 +368,131 @@ export default function Ventes() {
           <div className="flex-1 overflow-y-auto min-h-[300px]">
             {viewMode === "grid" ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
-                {filteredProduits.map((produit) => (
-                  <button
-                    key={produit.id}
-                    onClick={() => addToCart(produit)}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 hover:shadow-md hover:border-orange-300 transition-all text-left relative group"
-                  >
-                    <div className="aspect-square bg-gray-100 rounded-lg mb-2 overflow-hidden">
-                      {produit.image ? (
-                        <img
-                          src={getImageUrl(produit.image)}
-                          alt={produit.nom}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ShoppingCart className="w-8 h-8 text-gray-300" />
+                {filteredProduits.map((produit) => {
+                  const inCart = isInCart(produit.id);
+                  const cartItem = getCartItem(produit.id);
+                  const isActive = produit.statut === "actif" || !produit.statut;
+                  return (
+                    <div
+                      key={produit.id}
+                      className={`bg-white rounded-xl shadow-sm border p-3 hover:shadow-md transition-all relative ${
+                        inCart ? "border-green-500 ring-1 ring-green-500" : "border-gray-100 hover:border-orange-300"
+                      } ${!isActive ? 'opacity-50' : ''}`}
+                    >
+                      {/* Cart Badge */}
+                      {inCart && (
+                        <div className="absolute top-2 right-2 z-10 bg-green-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
+                          <ShoppingCart className="w-3 h-3" />
                         </div>
                       )}
-                    </div>
-                    <h3 className="font-medium text-gray-800 text-sm truncate">
-                      {produit.nom}
-                    </h3>
-                    <p className="text-orange-600 font-bold">
-                      {new Intl.NumberFormat("fr-FR").format(produit.prixVente)} F
-                    </p>
-                    <p className="text-xs text-gray-500">Stock: {produit.stock}</p>
-                    <span className="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                      Ajouter
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredProduits.map((produit) => (
-                  <button
-                    key={produit.id}
-                    onClick={() => addToCart(produit)}
-                    className="w-full bg-white rounded-xl shadow-sm border border-gray-100 p-3 hover:shadow-md hover:border-orange-300 transition-all text-left flex items-center gap-3 relative"
-                  >
-                    <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                      {produit.image ? (
-                        <img
-                          src={getImageUrl(produit.image)}
-                          alt={produit.nom}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ShoppingCart className="w-6 h-6 text-gray-300" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
+                      <div className="aspect-square bg-gray-100 rounded-lg mb-2 overflow-hidden">
+                        {produit.image ? (
+                          <img
+                            src={getImageUrl(produit.image)}
+                            alt={produit.nom}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ShoppingCart className="w-8 h-8 text-gray-300" />
+                          </div>
+                        )}
+                      </div>
                       <h3 className="font-medium text-gray-800 text-sm truncate">
                         {produit.nom}
                       </h3>
-                      <p className="text-xs text-gray-500">{produit.categorie?.nom || "Sans catégorie"}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
                       <p className="text-orange-600 font-bold">
                         {new Intl.NumberFormat("fr-FR").format(produit.prixVente)} F
                       </p>
-                      <p className="text-xs text-gray-500">Stock: {produit.stock}</p>
+                      <p className="text-xs text-gray-500 mb-2">Stock: {produit.stock}</p>
+                      <button
+                        onClick={() => isActive && addToCart(produit)}
+                        disabled={!isActive}
+                        className={`w-full py-2 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-1 ${
+                          inCart 
+                            ? "bg-green-500 text-white" 
+                            : isActive 
+                              ? "bg-orange-500 text-white hover:bg-orange-600" 
+                              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        }`}
+                      >
+                        {inCart ? (
+                          <>
+                            <Check className="w-4 h-4" />
+                            <span>{cartItem?.quantite || 1}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4" />
+                            Ajouter
+                          </>
+                        )}
+                      </button>
                     </div>
-                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-orange-500 text-white text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity">
-                      Ajouter
-                    </span>
-                  </button>
-                ))}
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredProduits.map((produit) => {
+                  const inCart = isInCart(produit.id);
+                  const cartItem = getCartItem(produit.id);
+                  const isActive = produit.statut === "actif" || !produit.statut;
+                  return (
+                    <div
+                      key={produit.id}
+                      className={`bg-white rounded-xl shadow-sm border p-3 hover:shadow-md transition-all flex items-center gap-3 ${
+                        inCart ? "border-green-500 ring-1 ring-green-500" : "border-gray-100 hover:border-orange-300"
+                      } ${!isActive ? 'opacity-50' : ''}`}
+                    >
+                      <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                        {produit.image ? (
+                          <img
+                            src={getImageUrl(produit.image)}
+                            alt={produit.nom}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ShoppingCart className="w-6 h-6 text-gray-300" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium text-gray-800 text-sm truncate">
+                          {produit.nom}
+                        </h3>
+                        <p className="text-xs text-gray-500">{produit.categorie?.nom || "Sans catégorie"}</p>
+                        <p className="text-orange-600 font-bold mt-1">
+                          {new Intl.NumberFormat("fr-FR").format(produit.prixVente)} F
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-xs text-gray-500">Stock: {produit.stock}</p>
+                        <button
+                          onClick={() => isActive && addToCart(produit)}
+                          disabled={!isActive}
+                          className={`mt-2 w-10 h-10 rounded-lg font-medium text-lg transition-all flex items-center justify-center ${
+                            inCart 
+                              ? "bg-green-500 text-white" 
+                              : isActive 
+                                ? "bg-orange-500 text-white hover:bg-orange-600" 
+                                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          }`}
+                        >
+                          {inCart ? (
+                            <>
+                              <Check className="w-4 h-4" />
+                              <span className="ml-1 text-sm">{cartItem?.quantite || 1}</span>
+                            </>
+                          ) : (
+                            <Plus className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -599,7 +699,7 @@ export default function Ventes() {
                 <div className="flex items-center gap-2">
                   <span className="text-lg font-semibold text-white">
                     <Receipt className="inline-block w-5 h-5 mr-2 text-blue-400" />
-                    Aperçu du reçu
+                    Reçu de vente
                   </span>
                 </div>
                 <button onClick={() => { setShowSuccessModal(false); fetchData(); }} className="p-1 hover:bg-[#23263a] rounded">
@@ -607,36 +707,68 @@ export default function Ventes() {
                 </button>
               </div>
               <div className="flex-1 flex flex-col items-center justify-center p-4 overflow-y-auto">
-                <div className="bg-white rounded-xl shadow p-6 w-full max-w-sm mx-auto">
-                  <div className="text-center mb-2">
-                    <span className="text-2xl font-bold flex items-center justify-center gap-2">
-                      <span role="img" aria-label="logo">🧾</span> GESTICOM
-                    </span>
-                    <div className="text-xs text-gray-500 leading-tight">Système de Gestion Commerciale<br/>Tél: +221 77 142 81 50<br/>Dakar, Sénégal</div>
+                <div className="bg-white rounded-none shadow-lg w-full max-w-sm mx-auto" style={{ fontFamily: 'Courier New, monospace' }}>
+                  {/* Header avec logo */}
+                  <div className="text-center pb-3 border-b-2 border-dashed border-gray-800">
+                    <div className="flex justify-center mb-2">
+                      <div className="bg-orange-500 w-12 h-12 rounded-lg flex items-center justify-center">
+                        <ShoppingCart className="text-white w-7 h-7" />
+                      </div>
+                    </div>
+                    <h1 className="text-xl font-bold text-gray-900 tracking-wide">GESTICOM</h1>
+                    <p className="text-xs text-gray-600 mt-1">Système de Gestion Commerciale</p>
+                    <p className="text-xs text-gray-500">Tél: +221 77 142 81 50</p>
+                    <p className="text-xs text-gray-500">Dakar, Sénégal</p>
                   </div>
-                  <hr className="my-2 border-dashed border-gray-300" />
-                  <div className="text-xs mb-2">
-                    <div className="flex justify-between"><span>N° Reçu:</span><span className="font-mono">{lastSale.reference}</span></div>
-                    <div className="flex justify-between"><span>Date:</span><span>{new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })} {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span></div>
-                    <div className="flex justify-between"><span>Caissier:</span><span>{lastSale.user?.nom || 'N/A'}</span></div>
-                    <div className="flex justify-between"><span>Mode:</span><span>{getPaymentMethodLabel(lastSale.modePaiement || paymentMethod)}</span></div>
+                  
+                  {/* Info transaction */}
+                  <div className="py-2 border-b border-dashed border-gray-300 text-xs">
+                    <div className="flex justify-between"><span className="text-gray-600">N° Reçu:</span><span className="font-bold">{lastSale.reference}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">Date:</span><span>{new Date().toLocaleDateString('fr-FR')}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">Heure:</span><span>{new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">Caissier:</span><span>{lastSale.user?.nom || 'N/A'}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-600">Mode:</span><span>{getPaymentMethodLabel(lastSale.modePaiement || paymentMethod)}</span></div>
                   </div>
-                  <hr className="my-2 border-dashed border-gray-300" />
-                  <div className="text-xs mb-2">
-                    <span className="font-bold">ARTICLES</span>
+                  
+                  {/* Articles */}
+                  <div className="py-2 border-b-2 border-dashed border-gray-800 text-xs">
+                    <div className="font-bold text-center mb-2">*** ARTICLES ***</div>
                     {lastSale.lignes && lastSale.lignes.map((ligne, idx) => (
-                      <div key={idx} className="flex justify-between">
-                        <span>{ligne.produit?.nom || 'Produit'}<br/><span className="text-gray-500">{ligne.quantite} × {new Intl.NumberFormat('fr-FR').format(ligne.prixUnitaire)} FCFA</span></span>
-                        <span className="font-semibold">{new Intl.NumberFormat('fr-FR').format(ligne.sousTotal)} F</span>
+                      <div key={idx} className="mb-1">
+                        <div className="flex justify-between font-medium">
+                          <span className="truncate max-w-[180px]">{ligne.produit?.nom || 'Produit'}</span>
+                          <span className="font-bold">{new Intl.NumberFormat('fr-FR').format(ligne.sousTotal)} F</span>
+                        </div>
+                        <div className="text-gray-500 text-xs pl-2">
+                          {ligne.quantite} x {new Intl.NumberFormat('fr-FR').format(ligne.prixUnitaire)} F
+                        </div>
                       </div>
                     ))}
                   </div>
-                  <hr className="my-2 border-dashed border-gray-300" />
-                  <div className="flex justify-between items-center text-base font-bold">
-                    <span>TOTAL</span>
-                    <span className="text-black">{new Intl.NumberFormat('fr-FR').format(lastSale.total)} FCFA</span>
+                  
+                  {/* Total */}
+                  <div className="py-3 border-b-2 border-dashed border-gray-800">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold text-gray-900">TOTAL</span>
+                      <span className="text-xl font-bold text-gray-900">{new Intl.NumberFormat('fr-FR').format(lastSale.total)} F</span>
+                    </div>
                   </div>
-                  <div className="text-center text-xs text-gray-400 mt-4 mb-1">Merci de votre visite !<br/><span className="text-yellow-500">🙏</span> À bientôt</div>
+                  
+                  {/* Montant donné et monnaie (si espèces) */}
+                  {paymentMethod === "ESPECES" && amountGiven && (
+                    <div className="py-2 border-b border-dashed border-gray-300 text-xs">
+                      <div className="flex justify-between"><span className="text-gray-600">Montant donné:</span><span>{new Intl.NumberFormat('fr-FR').format(Number(amountGiven))} F</span></div>
+                      {changeAmount >= 0 && (
+                        <div className="flex justify-between font-bold"><span className="text-gray-900">Monnaie:</span><span>{new Intl.NumberFormat('fr-FR').format(changeAmount)} F</span></div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Footer */}
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-700">Merci de votre visite !</p>
+                    <p className="text-lg mt-1">🙏 À bientôt</p>
+                  </div>
                 </div>
                 <div className="flex gap-3 mt-6 w-full max-w-sm mx-auto">
                   <button

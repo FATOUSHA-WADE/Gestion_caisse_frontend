@@ -141,17 +141,31 @@ export default function HistoriqueVentes() {
     try {
       setPrinting(vente.id);
       const token = localStorage.getItem("token");
-      const response = await API.get(
+      
+      // First, ensure the PDF is generated
+      await API.get(
         `/recus/${vente.id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Then download it directly
+      const response = await API.get(
+        `/recus/${vente.id}/pdf`,
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
         }
       );
       
-      if (response.data.data?.urlPdf) {
-        // Open PDF in new tab for printing
-        window.open(`http://localhost:3000/${response.data.data.urlPdf}`, '_blank');
-      }
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `recu-${vente.reference || vente.id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Erreur impression:", err);
       alert("Erreur lors de l'impression du reçu");

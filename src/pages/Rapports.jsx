@@ -318,7 +318,7 @@ export default function Rapports() {
           </div>
         </div>
 
-        {/* Top Products */}
+        {/* Top Products - Horizontal Bar Chart */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-center gap-2 mb-4">
             <Package className="w-5 h-5 text-orange-500" />
@@ -328,25 +328,40 @@ export default function Rapports() {
           </div>
           
           {topProduits.length > 0 ? (
-            <div className="space-y-2">
-              {topProduits.map((produit, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+            <div style={{ width: '100%', height: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={topProduits.slice(0, 8)} 
+                  layout="vertical"
+                  barCategoryGap="20%"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm">
-                      {index + 1}
-                    </span>
-                    <span className="font-medium text-gray-800">
-                      {produit.nom}
-                    </span>
-                  </div>
-                  <span className="font-semibold text-orange-600">
-                    {formatCurrency(produit.total)}
-                  </span>
-                </div>
-              ))}
+                  <XAxis 
+                    type="number" 
+                    stroke="#6b7280" 
+                    fontSize={11}
+                    tickFormatter={(value) => value.toLocaleString('fr-FR')}
+                  />
+                  <YAxis 
+                    type="category" 
+                    dataKey="nom" 
+                    stroke="#6b7280" 
+                    fontSize={11}
+                    width={120}
+                    tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value}
+                  />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                    formatter={(value) => [formatCurrency(value), 'Ventes']}
+                  />
+                  <Bar 
+                    dataKey="total" 
+                    fill="#f97316" 
+                    radius={[0, 4, 4, 0]} 
+                    name="Ventes"
+                    isAnimationActive={false}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           ) : (
             <div className="text-center py-8 text-gray-400">

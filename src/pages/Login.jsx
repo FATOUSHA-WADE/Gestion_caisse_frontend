@@ -71,13 +71,20 @@ export default function Login() {
       console.error('[Login] Erreur:', error);
       console.error('[Login] Response:', error.response?.data);
       
+      // Get error message from various sources
+      let errorMessage = "Erreur de connexion. Veuillez vérifier que le serveur est démarré et réessayer.";
+      
       if (error.response?.status === 401) {
-        setApiError("Identifiants incorrects. Veuillez vérifier votre numéro de téléphone et votre mot de passe.");
+        errorMessage = "Identifiants incorrects. Veuillez vérifier votre numéro de téléphone et votre mot de passe.";
       } else if (error.response?.data?.message) {
-        setApiError(error.response.data.message);
-      } else {
-        setApiError("Erreur de connexion. Veuillez réessayer.");
+        errorMessage = error.response.data.message;
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message && error.message.includes('Network')) {
+        errorMessage = "Erreur de connexion. Le serveur n'est pas joignable. Veuillez vérifier que le serveur est démarré.";
       }
+      
+      setApiError(errorMessage);
     } finally {
       setLoading(false);
     }

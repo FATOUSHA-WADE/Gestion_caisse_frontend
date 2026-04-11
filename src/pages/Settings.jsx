@@ -335,37 +335,64 @@ export default function Settings() {
                     />
                   </div>
 
-                  <div className="md:col-span-2">
+                    <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       Modes de paiement
                     </label>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {['Espèces', 'Orange Money', 'Wave', 'Visa', 'Moov Money', 'Free Money'].map((mode) => (
+                      {settings.modesPaiement.map((mode) => (
                         <label
                           key={mode}
-                          className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                          className={`flex items-center justify-between gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
                             settings.modesPaiement.includes(mode)
                               ? 'border-orange-500 bg-orange-50'
                               : 'border-gray-300 bg-white hover:border-gray-400'
                           }`}
                         >
-                          <input
-                            type="checkbox"
-                            checked={settings.modesPaiement.includes(mode)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSettings({ ...settings, modesPaiement: [...settings.modesPaiement, mode] });
-                              } else {
-                                setSettings({ ...settings, modesPaiement: settings.modesPaiement.filter(m => m !== mode) });
-                              }
-                            }}
-                            className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
-                          />
-                          <span className={`font-medium ${
-                            settings.modesPaiement.includes(mode) ? 'text-gray-900' : 'text-gray-600'
-                          }`}>{mode}</span>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={settings.modesPaiement.includes(mode)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSettings({ ...settings, modesPaiement: [...settings.modesPaiement, mode] });
+                                } else {
+                                  setSettings({ ...settings, modesPaiement: settings.modesPaiement.filter(m => m !== mode) });
+                                }
+                              }}
+                              className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+                            />
+                            <span className={`font-medium ${
+                              settings.modesPaiement.includes(mode) ? 'text-gray-900' : 'text-gray-600'
+                            }`}>{mode}</span>
+                          </div>
+                          {mode !== 'Espèces' && mode !== 'Orange Money' && mode !== 'Wave' && mode !== 'Carte bancaire' && (
+                            <button
+                              type="button"
+                              onClick={() => setSettings({ ...settings, modesPaiement: settings.modesPaiement.filter(m => m !== mode) })}
+                              className="text-red-500 hover:text-red-700 text-xs"
+                            >
+                              ✕
+                            </button>
+                          )}
                         </label>
                       ))}
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Ajouter un mode de paiement..."
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-orange-500"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && e.target.value.trim()) {
+                            const newMode = e.target.value.trim();
+                            if (!settings.modesPaiement.includes(newMode)) {
+                              setSettings({ ...settings, modesPaiement: [...settings.modesPaiement, newMode] });
+                            }
+                            e.target.value = '';
+                          }
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
@@ -374,25 +401,6 @@ export default function Settings() {
 
             {activeTab === "preferences" && (
               <div className="space-y-6">
-                {/* Alerts */}
-                <div className="flex items-center justify-between py-4 border-b border-gray-200">
-                  <div>
-                    <h3 className="font-medium text-gray-900">Alertes de stock</h3>
-                    <p className="text-sm text-gray-500">Recevoir des notifications quand le stock est faible</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSettings({ ...settings, alertesStock: !settings.alertesStock })}
-                    className={`w-12 h-6 rounded-full transition-colors ${
-                      settings.alertesStock ? "bg-orange-500" : "bg-gray-300"
-                    }`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full shadow transform transition-transform ${
-                      settings.alertesStock ? "translate-x-6" : "translate-x-0.5"
-                    }`} />
-                  </button>
-                </div>
-
                 {/* Auto Receipt */}
                 <div className="flex items-center justify-between py-4 border-b border-gray-200">
                   <div>

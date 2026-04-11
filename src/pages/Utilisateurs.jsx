@@ -412,11 +412,13 @@ export default function Utilisateurs() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filteredUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50">
+                  {filteredUsers.map((u) => {
+                    const isActive = u.statut === 'actif';
+                    return (
+                    <tr key={u.id} className={`hover:bg-gray-50 ${!isActive ? 'opacity-50' : ''}`}>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-orange-100 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0">
+                          <div className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 ${isActive ? 'bg-orange-100' : 'bg-gray-200'}`}>
                             {u.photo ? (
                               <img
                                 src={getUploadUrl(u.photo)}
@@ -429,19 +431,19 @@ export default function Utilisateurs() {
                               />
                             ) : null}
                             <span 
-                              className={`text-orange-600 font-medium text-sm ${u.photo ? 'hidden' : ''}`}
+                              className={`font-medium text-sm ${u.photo ? 'hidden' : ''} ${isActive ? 'text-orange-600' : 'text-gray-500'}`}
                               style={u.photo ? {display: 'none'} : {display: 'flex'}}
                             >
                               {getInitials(u.nom)}
                             </span>
                           </div>
-                          <span className="font-medium text-gray-800">{u.nom}</span>
+                          <span className={`font-medium ${isActive ? 'text-gray-800' : 'text-gray-400'}`}>{u.nom}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-gray-600">
+                      <td className={`px-6 py-4 ${isActive ? 'text-gray-600' : 'text-gray-400'}`}>
                         {u.telephone}
                       </td>
-                      <td className="px-6 py-4 text-gray-600">
+                      <td className={`px-6 py-4 ${isActive ? 'text-gray-600' : 'text-gray-400'}`}>
                         {u.email || "-"}
                       </td>
                       <td className="px-6 py-4">
@@ -451,7 +453,7 @@ export default function Utilisateurs() {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          u.statut === "actif" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"
+                          u.statut === "actif" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
                         }`}>
                           {u.statut === "actif" ? "Actif" : "Inactif"}
                         </span>
@@ -505,7 +507,8 @@ export default function Utilisateurs() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
 
