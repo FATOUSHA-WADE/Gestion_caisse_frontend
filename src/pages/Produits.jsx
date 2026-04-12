@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Layout from "../components/Layout";
 import API from "../api/axios";
+import { STATIC_BASE_URL } from "../utils/apiConfig";
 import { AuthContext } from "../context/AuthContext";
 import { useToast, ConfirmModal } from "../components/ui";
 
@@ -379,12 +380,7 @@ export default function Produits() {
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
     if (imagePath.startsWith("http")) return imagePath;
-    
-    const { hostname } = window.location;
-    const baseURL = (hostname === 'localhost' || hostname === '127.0.0.1') 
-      ? 'http://localhost:3000' 
-      : 'https://gestion-caisse.onrender.com';
-    return `${baseURL}/${imagePath}`;
+    return `${STATIC_BASE_URL}/${imagePath}`;
   };
 
   const isLowStock = (produit) => {

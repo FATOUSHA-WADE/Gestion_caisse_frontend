@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import Layout from "../components/Layout";
 import API from "../api/axios";
-import { API_BASE_URL } from "../utils/apiConfig";
+import { API_BASE_URL, STATIC_BASE_URL } from "../utils/apiConfig";
 
 export default function Ventes() {
   const [produits, setProduits] = useState([]);
@@ -266,7 +266,7 @@ export default function Ventes() {
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
     if (imagePath.startsWith("http")) return imagePath;
-    return `http://localhost:3000/${imagePath}`;
+    return `${STATIC_BASE_URL}/${imagePath}`;
   };
 
   const getPaymentMethodLabel = (method) => {
