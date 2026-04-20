@@ -87,6 +87,40 @@ export default function Navbar({ onMenuClick, onCollapseClick, sidebarCollapsed 
     fetchUnreadCount().then(count => setUnreadCount(count));
   }, []);
 
+  // SSE pour les notifications en temps réel
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token || !user?.id) return;
+
+    const eventSource = new EventSource(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications/sse/${user.id}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[SSE] Notification reçue:', data);
+        // Incrémenter le compteur de notifications non lues
+        setUnreadCount(prev => prev + 1);
+        // Mettre à jour la liste si le panneau est ouvert
+        if (showNotifications) {
+          fetchNotifications().then(data => setNotifications(data));
+        }
+      } catch (e) {
+        console.log('[SSE] Message:', event.data);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.log('[SSE] Erreur, reconnexion...');
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [user?.id]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (notifRef.current && !notifRef.current.contains(event.target)) {
@@ -116,6 +150,25 @@ export default function Navbar({ onMenuClick, onCollapseClick, sidebarCollapsed 
           error.message?.includes("Network Error") || error.message?.includes("Connection closed")) {
         return;
       }
+      console.error("Erreur:", error);
+    }
+  };
+
+  const markAsRead = async (notificationId) => {
+    const notif = notifications.find(n => n.id === notificationId);
+    if (!notif || notif.lu) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      await API.patch(`/notifications/${notificationId}/lue`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const updatedNotifications = notifications.map(n => 
+        n.id === notificationId ? { ...n, lu: true } : n
+      );
+      setNotifications(updatedNotifications);
+      fetchUnreadCount().then(count => setUnreadCount(count));
+    } catch (error) {
       console.error("Erreur:", error);
     }
   };
@@ -280,12 +333,17 @@ export default function Navbar({ onMenuClick, onCollapseClick, sidebarCollapsed 
         {/* Notifications */}
         <div className="relative" ref={notifRef}>
           <button 
-            onClick={() => setShowNotifications(!showNotifications)}
+            onClick={() => {
+              setShowNotifications(!showNotifications);
+              if (!showNotifications) {
+                setUnreadCount(0);
+              }
+            }}
             className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             <Bell className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">
+              <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center animate-pulse">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
@@ -328,7 +386,8 @@ export default function Navbar({ onMenuClick, onCollapseClick, sidebarCollapsed 
                   notifications.map((notif) => (
                     <div
                       key={notif.id}
-                      className={`p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 ${notif.lu === false ? "bg-orange-50 dark:bg-orange-900/20" : ""}`}
+                      onClick={() => markAsRead(notif.id)}
+                      className={`p-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${notif.lu === false ? "bg-orange-50 dark:bg-orange-900/20" : ""}`}
                     >
                       <div className="flex items-start gap-2">
                         <div className={`w-2 h-2 rounded-full mt-2 ${notif.lu === false ? "bg-orange-500" : "bg-transparent"}`} />

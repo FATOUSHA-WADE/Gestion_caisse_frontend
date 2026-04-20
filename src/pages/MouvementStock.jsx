@@ -44,6 +44,7 @@ export default function MouvementStock() {
   }, [pagination.page, typeFilter]);
 
   const fetchMouvements = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem("token");
       const params = new URLSearchParams({
@@ -200,6 +201,9 @@ export default function MouvementStock() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
+                setLoading(true);
+                setPagination(prev => ({ ...prev, page: 1 }));
+                setTypeFilter("");
                 fetchMouvements();
                 fetchProduits();
               }}

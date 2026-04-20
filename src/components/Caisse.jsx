@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 const formatCurrency = (value) => {
-  return new Intl.NumberFormat("fr-FR").format(value || 0) + " FCA";
+  return new Intl.NumberFormat("fr-FR").format(value || 0) + " FCFA";
 };
 
 const getInitials = (name) => {

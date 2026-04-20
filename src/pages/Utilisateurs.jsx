@@ -125,9 +125,56 @@ export default function Utilisateurs() {
     e.preventDefault();
     setApiError("");
     
-    // Validate all fields
-    const isValid = validateAll();
+    // Mark all fields as touched to show errors
+    const allTouched = {};
+    Object.keys(userValidationRules).forEach(key => {
+      allTouched[key] = true;
+    });
+    setTouched(allTouched);
+    
+    // Validate all fields - manually set errors for immediate feedback
+    const newErrors = {};
+    let isValid = true;
+    Object.keys(userValidationRules).forEach((fieldName) => {
+      const rules = userValidationRules[fieldName];
+      const value = values[fieldName];
+      
+      if (rules.required && (!value || (typeof value === 'string' && value.trim() === ''))) {
+        newErrors[fieldName] = rules.requiredMessage || `Veuillez saisir ${fieldName}`;
+        isValid = false;
+      } else if (rules.minLength && value && value.length < rules.minLength) {
+        newErrors[fieldName] = rules.minLengthMessage || `Le champ doit contenir au moins ${rules.minLength} caractères`;
+        isValid = false;
+      } else if (rules.email && value) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) {
+          newErrors[fieldName] = rules.emailMessage || 'Veuillez entrer une adresse email valide';
+          isValid = false;
+        }
+      } else if (rules.phone && value) {
+        const cleaned = value.replace(/[\s\-\(\)\.]/g, '');
+        let phone = cleaned;
+        if (phone.startsWith('+221')) {
+          phone = phone.substring(3);
+        } else if (phone.startsWith('221')) {
+          phone = phone.substring(2);
+        } else if (phone.startsWith('00221')) {
+          phone = phone.substring(4);
+        } else if (phone.startsWith('0')) {
+          phone = phone.substring(1);
+        }
+        const digitsOnly = phone.replace(/\D/g, '');
+        const validPrefix = digitsOnly.startsWith('77') || digitsOnly.startsWith('78');
+        if (digitsOnly.length !== 9 || !validPrefix) {
+          newErrors[fieldName] = rules.phoneMessage || 'Numéro invalide';
+          isValid = false;
+        }
+      }
+    });
+    setErrors(newErrors);
+    
     if (!isValid) {
+      setApiError("Veuillez saisir les informations");
       return;
     }
     

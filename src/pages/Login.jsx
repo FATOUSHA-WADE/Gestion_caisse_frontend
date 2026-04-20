@@ -45,6 +45,12 @@ export default function Login() {
     e.preventDefault();
     setApiError("");
 
+    // Check if fields are empty before validation
+    if (!values.telephone || !values.password) {
+      setApiError("Veuillez saisir les identifiants pour se connecter");
+      return;
+    }
+
     // Validate all fields before submitting
     const isValid = validateAll();
     
@@ -75,7 +81,11 @@ export default function Login() {
       let errorMessage = "Erreur de connexion. Veuillez vérifier que le serveur est démarré et réessayer.";
       
       if (error.response?.status === 401) {
-        errorMessage = "Identifiants incorrects. Veuillez vérifier votre numéro de téléphone et votre mot de passe.";
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else {
+          errorMessage = "Identifiants incorrects. Veuillez vérifier votre numéro de téléphone et votre mot de passe.";
+        }
       } else if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.response?.data?.error) {
@@ -142,7 +152,7 @@ export default function Login() {
             onBlur={handleBlur}
             error={errors.telephone}
             touched={touched.telephone}
-            placeholder="77.. ou +22177..."
+            placeholder="numéro de téléphone..."
             required
           />
           
