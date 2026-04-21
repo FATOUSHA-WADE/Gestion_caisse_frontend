@@ -66,33 +66,40 @@ export default function HistoriqueVentes() {
   const fetchVentes = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await API.get(`/ventes?page=${pagination.page}&limit=${pagination.limit}`, {
+      const params = new URLSearchParams({
+        page: pagination.page,
+        limit: pagination.limit
+      });
+      
+      if (searchTerm) {
+        params.append("reference", searchTerm);
+      }
+      
+      const res = await API.get(`/ventes?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       
       // Use backend pagination properly
-      const data = res.data.data || [];
+      let data = res.data.data || [];
       const meta = res.data.meta || { total: 0, page: 1, limit: 10, totalPages: 1 };
-      
-      let filteredVentes = data;
       
       // Filter by date on frontend (since backend doesn't support date filters in getAll)
       if (dateFrom) {
         const fromDate = new Date(dateFrom);
         fromDate.setHours(0, 0, 0, 0);
-        filteredVentes = filteredVentes.filter(v => new Date(v.createdAt) >= fromDate);
+        data = data.filter(v => new Date(v.createdAt) >= fromDate);
       }
       if (dateTo) {
         const toDate = new Date(dateTo);
         toDate.setHours(23, 59, 59, 999);
-        filteredVentes = filteredVentes.filter(v => new Date(v.createdAt) <= toDate);
+        data = data.filter(v => new Date(v.createdAt) <= toDate);
       }
       
       if (statusFilter) {
-        filteredVentes = filteredVentes.filter(v => v.statut === statusFilter);
+        data = data.filter(v => v.statut === statusFilter);
       }
       
-      setVentes(filteredVentes);
+      setVentes(data);
       setPagination(prev => ({
         ...prev,
         total: meta.total,
@@ -102,7 +109,7 @@ export default function HistoriqueVentes() {
     } catch {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, dateFrom, dateTo, statusFilter]);
+  }, [pagination.page, pagination.limit, dateFrom, dateTo, statusFilter, searchTerm]);
 
   useEffect(() => {
     fetchVentes();

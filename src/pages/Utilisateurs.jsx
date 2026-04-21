@@ -499,11 +499,17 @@ export default function Utilisateurs() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          u.statut === "actif" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
-                        }`}>
-                          {u.statut === "actif" ? "Actif" : "Inactif"}
-                        </span>
+                        {u.isBlocked ? (
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                            Bloqué
+                          </span>
+                        ) : (
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            u.statut === "actif" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                          }`}>
+                            {u.statut === "actif" ? "Actif" : "Inactif"}
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -532,24 +538,15 @@ export default function Utilisateurs() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          {/* Show edit/delete for admin users only */}
+                          {/* Show edit button for admin users only */}
                           {user?.role === 'admin' && (
-                            <>
-                              <button
-                                onClick={() => openEditModal(u)}
-                                className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
-                                title="Modifier"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(u.id)}
-                                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Supprimer"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
+                            <button
+                              onClick={() => openEditModal(u)}
+                              className="p-2 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                              title="Modifier"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
                           )}
                         </div>
                       </td>

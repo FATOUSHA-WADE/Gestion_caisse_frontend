@@ -20,6 +20,9 @@ import {
 
 export default function Rapports() {
   const [loading, setLoading] = useState(true);
+  const [monthFilter, setMonthFilter] = useState("");
+  const [yearFilter, setYearFilter] = useState("");
+  const [availableYears, setAvailableYears] = useState([]);
   const [stats, setStats] = useState({
     caTotal: 0,
     beneficeTotal: 0,
@@ -117,18 +120,53 @@ export default function Rapports() {
 
   useEffect(() => {
     fetchRapports();
-  }, []);
+  }, [monthFilter, yearFilter]);
 
   const fetchRapports = async () => {
     try {
       const token = localStorage.getItem("token");
       
-      // Fetch all sales
+      // Build date filter
+      let startDate = new Date(`${yearFilter}-01-01`);
+      let endDate = new Date(`${yearFilter}-12-31`);
+      
+      if (monthFilter) {
+        startDate = new Date(`${yearFilter}-${monthFilter}-01`);
+        endDate = new Date(yearFilter, monthFilter, 0);
+      }
+      endDate.setHours(23, 59, 59, 999);
+      
+      // Fetch filtered sales
       const ventesRes = await API.get("/ventes?limit=1000", {
         headers: { Authorization: `Bearer ${token}` },
       });
       
-      const ventes = ventesRes.data.data || [];
+      let ventes = ventesRes.data.data || [];
+      
+      // Filter by date on frontend
+      ventes = ventes.filter(v => {
+        const venteDate = new Date(v.createdAt);
+        return venteDate >= startDate && venteDate <= endDate;
+      });
+      
+      // Extract available years from all sales (all years from database)
+      const allVentes = ventesRes.data.data || [];
+      const years = new Set(allVentes.map(v => new Date(v.createdAt).getFullYear()));
+      
+      // Add all years from 2020 to current year if not present
+      const currentYear = new Date().getFullYear();
+      for (let year = 2020; year <= currentYear; year++) {
+        years.add(year);
+      }
+      
+      const uniqueYears = [...years].sort((a, b) => b - a);
+      setAvailableYears(uniqueYears);
+      
+      // Set default year filter to current year if not set
+      if (!yearFilter) {
+        setYearFilter(currentYear.toString());
+      }
+      
       const validees = ventes.filter(v => v.statut === "validee");
       
       // Calculate stats
@@ -218,7 +256,7 @@ export default function Rapports() {
     <Layout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Rapports</h1>
             <p className="text-gray-500">Statistiques et analyses</p>
@@ -239,6 +277,39 @@ export default function Rapports() {
               Excel
             </button>
           </div>
+        </div>
+
+        {/* Filtres en bas du titre */}
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <span className="text-sm font-medium text-gray-600">Filtrer par :</span>
+          <select
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+          >
+            <option value="">Tous les mois</option>
+            <option value="01">Janvier</option>
+            <option value="02">Février</option>
+            <option value="03">Mars</option>
+            <option value="04">Avril</option>
+            <option value="05">Mai</option>
+            <option value="06">Juin</option>
+            <option value="07">Juillet</option>
+            <option value="08">Août</option>
+            <option value="09">Septembre</option>
+            <option value="10">Octobre</option>
+            <option value="11">Novembre</option>
+            <option value="12">Décembre</option>
+          </select>
+          <select
+            value={yearFilter}
+            onChange={(e) => setYearFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+          >
+            {availableYears.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
         </div>
 
         {/* KPI Cards */}

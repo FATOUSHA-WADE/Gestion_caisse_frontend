@@ -18,7 +18,7 @@ import API from "../api/axios";
 import { useParameters } from "../context/ParameterContext";
 
 export default function Settings() {
-  const { applyThemeColor } = useParameters();
+  const { applyThemeColor, updateParametersLocally } = useParameters();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("commerce");
@@ -145,7 +145,10 @@ export default function Settings() {
       });
 
       if (res.data.success) {
-        applyThemeColor(settings.couleurPrincipale);
+        const savedData = res.data.data;
+        setSettings(savedData);
+        applyThemeColor(savedData.couleurPrincipale);
+        updateParametersLocally(savedData);
         setShowSuccessPopup(true);
         setTimeout(() => setShowSuccessPopup(false), 3000);
       }
@@ -432,6 +435,7 @@ export default function Settings() {
                   >
                     <option value="fr">Français</option>
                     <option value="en">English</option>
+                    <option value="wo">Wolof</option>
                   </select>
                 </div>
 

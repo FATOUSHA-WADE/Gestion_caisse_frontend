@@ -112,6 +112,13 @@ export function ParameterProvider({ children }) {
     }
   };
 
+  // Update parameters locally without API call (for immediate theme updates)
+  const updateParametersLocally = (newData) => {
+    setParameters(newData);
+    applyFullTheme(newData);
+    localStorage.setItem("parameters", JSON.stringify(newData));
+  };
+
   // Convert hex to RGB
   const hexToRgb = (hex) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -184,6 +191,7 @@ export function ParameterProvider({ children }) {
       error, 
       fetchParameters, 
       updateParameters,
+      updateParametersLocally,
       applyThemeColor,
       applyFullTheme 
     }}>

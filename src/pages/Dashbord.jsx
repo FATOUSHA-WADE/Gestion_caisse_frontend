@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [categorySales, setCategorySales] = useState([]);
   const [selectedSale, setSelectedSale] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [periodeFilter, setPeriodeFilter] = useState("semaine");
 
   const getFirstName = (fullName) => {
     if (!fullName) return "";
@@ -37,7 +38,7 @@ export default function Dashboard() {
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await API.get("/dashboard/stats", {
+      const res = await API.get(`/dashboard/stats?periode=${periodeFilter}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setStats(res.data.data);
@@ -59,7 +60,7 @@ export default function Dashboard() {
     }, 30000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [periodeFilter]);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("fr-FR").format(value) + " FCFA";
@@ -77,11 +78,19 @@ export default function Dashboard() {
 
   const statCards = [
     {
+      title: `CA (${periodeFilter === 'semaine' ? 'Semaine' : periodeFilter === 'mois' ? 'Mois' : 'Année'})`,
+      value: formatCurrency(stats?.caPeriode || 0),
+      icon: DollarSign,
+      color: "bg-green-500",
+      change: null,
+      positive: true,
+    },
+    {
       title: "CA du Jour",
       value: formatCurrency(stats?.caJour || 0),
       icon: DollarSign,
       color: "bg-green-500",
-      change: "+12%",
+      change: null,
       positive: true,
     },
     {
@@ -89,15 +98,7 @@ export default function Dashboard() {
       value: formatCurrency(stats?.caMois || 0),
       icon: TrendingUp,
       color: "bg-blue-500",
-      change: "+8%",
-      positive: true,
-    },
-    {
-      title: "Ventes",
-      value: stats?.nbVentes || 0,
-      icon: ShoppingCart,
-      color: "bg-purple-500",
-      change: "+5%",
+      change: null,
       positive: true,
     },
     {
@@ -105,7 +106,7 @@ export default function Dashboard() {
       value: stats?.stockFaible?.length || 0,
       icon: AlertTriangle,
       color: "bg-red-500",
-      change: "-3%",
+      change: null,
       positive: false,
     },
   ];
@@ -195,11 +196,45 @@ export default function Dashboard() {
             </h1>
             <p className="text-gray-500 text-sm sm:text-base">Bienvenue à GestiCom</p>
           </div>
-          {lastRefresh && (
-            <p className="text-xs text-gray-400">
-              Actualisé: {lastRefresh.toLocaleTimeString("fr-FR")}
-            </p>
-          )}
+        </div>
+
+        {/* Filtres */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-600">Période:</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPeriodeFilter("semaine")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  periodeFilter === "semaine"
+                    ? "bg-orange-500 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                Semaine
+              </button>
+              <button
+                onClick={() => setPeriodeFilter("mois")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  periodeFilter === "mois"
+                    ? "bg-orange-500 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                Mois
+              </button>
+              <button
+                onClick={() => setPeriodeFilter("annee")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  periodeFilter === "annee"
+                    ? "bg-orange-500 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                Année
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Stats Cards */}

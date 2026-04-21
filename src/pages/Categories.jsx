@@ -9,7 +9,10 @@ import {
   FolderTree,
   Eye,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MoreVertical,
+  Archive,
+  FolderInput
 } from "lucide-react";
 import Layout from "../components/Layout";
 import API from "../api/axios";
@@ -39,6 +42,7 @@ export default function Categories() {
   // Confirmation modal state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [openMenu, setOpenMenu] = useState(null);
   
   const [pagination, setPagination] = useState({
     page: 1,
@@ -164,6 +168,36 @@ export default function Categories() {
     }
   };
 
+  const handleArchive = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      await API.patch(`/categories/${id}/archive`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchCategories();
+      toast.success("Catégorie archivée avec succès");
+      setOpenMenu(null);
+    } catch (error) {
+      console.error("Erreur:", error);
+      toast.error(error.response?.data?.message || "Une erreur s'est produite");
+    }
+  };
+
+  const handleUnarchive = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      await API.patch(`/categories/${id}/unarchive`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchCategories();
+      toast.success("Catégorie désarchivée avec succès");
+      setOpenMenu(null);
+    } catch (error) {
+      console.error("Erreur:", error);
+      toast.error(error.response?.data?.message || "Une erreur s'est produite");
+    }
+  };
+
   const openEditModal = (category) => {
     setEditingCategory(category);
     const categoryData = {
@@ -198,11 +232,14 @@ export default function Categories() {
   // categories already come filtered from API with searchTerm parameter
   const filteredCategories = categories;
 
-  const getStatusBadge = (statut) => {
+  const getStatusBadge = (statut, isArchived) => {
     const badges = {
       actif: "bg-green-100 text-green-700",
       inactif: "bg-gray-100 text-gray-700",
     };
+    if (isArchived) {
+      return "bg-yellow-100 text-yellow-700";
+    }
     return badges[statut] || badges.inactif;
   };
 
@@ -316,8 +353,8 @@ export default function Categories() {
                         {category.description || "-"}
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(category.statut)}`}>
-                          {category.statut === "actif" ? "Actif" : "Inactif"}
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(category.statut, category.isArchived)}`}>
+                          {category.isArchived ? "Archivé" : category.statut === "actif" ? "Actif" : "Inactif"}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-gray-500">
@@ -341,13 +378,46 @@ export default function Categories() {
                               >
                                 <Edit className="w-4 h-4" />
                               </button>
-                              <button
-                                onClick={() => handleDelete(category.id)}
-                                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Supprimer"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              <div className="relative">
+                                <button
+                                  onClick={() => setOpenMenu(openMenu === category.id ? null : category.id)}
+                                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                  title="Plus d'options"
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </button>
+                                {openMenu === category.id && (
+                                  <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                                    {category.isArchived ? (
+                                      <button
+                                        onClick={() => handleUnarchive(category.id)}
+                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                      >
+                                        <FolderInput className="w-4 h-4" />
+                                        Désarchiver
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleArchive(category.id)}
+                                        className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                                      >
+                                        <Archive className="w-4 h-4" />
+                                        Archiver
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => {
+                                        handleDelete(category.id);
+                                        setOpenMenu(null);
+                                      }}
+                                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                      Supprimer
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </>
                           )}
                         </div>
@@ -483,8 +553,8 @@ export default function Categories() {
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold text-gray-800">{selectedCategory.nom}</h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(selectedCategory.statut)}`}>
-                      {selectedCategory.statut === "actif" ? "Actif" : "Inactif"}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(selectedCategory.statut, selectedCategory.isArchived)}`}>
+                      {selectedCategory.isArchived ? "Archivé" : selectedCategory.statut === "actif" ? "Actif" : "Inactif"}
                     </span>
                   </div>
                 </div>
