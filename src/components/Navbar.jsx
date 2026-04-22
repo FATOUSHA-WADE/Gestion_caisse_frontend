@@ -92,9 +92,9 @@ export default function Navbar({ onMenuClick, onCollapseClick, sidebarCollapsed 
     const token = localStorage.getItem("token");
     if (!token || !user?.id) return;
 
-    const eventSource = new EventSource(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications/sse/${user.id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const eventSource = new EventSource(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/notifications/stream?token=${token}`
+    );
 
     eventSource.onmessage = (event) => {
       try {
